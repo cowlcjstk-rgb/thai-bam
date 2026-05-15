@@ -14,7 +14,6 @@ gallery:
 addressText: "Bangkok central area"
 openingHours: "18:00-03:00"
 priceRange: "$$"
-telegramUrl: "https://t.me/example"
 featured: true
 visible: true
 order: 1

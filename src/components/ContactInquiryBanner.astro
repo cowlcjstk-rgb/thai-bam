@@ -2,21 +2,19 @@
 interface Props {
   kakaoUrl?: string;
   lineUrl?: string;
-  telegramUrl?: string;
 }
 
-const { kakaoUrl, lineUrl, telegramUrl } = Astro.props;
+const { kakaoUrl, lineUrl } = Astro.props;
 
 const channels = [
   { name: '카카오톡 문의', url: kakaoUrl, className: 'kakao' },
   { name: '라인 문의', url: lineUrl, className: 'line' },
-  { name: '텔레그램 문의', url: telegramUrl, className: 'telegram' },
 ];
 ---
 
 <section class="contact-banner" aria-label="문의 배너">
   <p class="contact-banner-title">빠른 문의</p>
-  <p class="contact-banner-subtitle">카톡 / 라인 / 텔레그램 링크는 곧 추가됩니다.</p>
+  <p class="contact-banner-subtitle">카카오톡 / 라인 링크는 곧 추가됩니다.</p>
 
   <div class="contact-banner-grid">
     {channels.map((channel) =>
@@ -59,7 +57,7 @@ const channels = [
   .contact-banner-grid {
     display: grid;
     gap: 10px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .contact-button {
@@ -102,11 +100,6 @@ const channels = [
 
   .line {
     background: #06c755;
-    color: #ffffff;
-  }
-
-  .telegram {
-    background: #229ed9;
     color: #ffffff;
   }
 

@@ -45,7 +45,6 @@ const venues = defineCollection({
     openingHours: z.string().optional(),
     priceRange: z.string().optional(),
     kakaoUrl: z.string().url().optional(),
-    telegramUrl: z.string().url().optional(),
     lineUrl: z.string().url().optional(),
     featured: z.boolean().default(false),
     visible: z.boolean().default(true),
