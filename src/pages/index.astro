@@ -20,7 +20,7 @@ const categoryHighlights = categories
 
 const faqItems = [
   {
-    q: '방콕, 파타야, 푸켓 중 어디부터 보는 게 좋나요?',
+    q: '방콕, 파타야, 치앙마이 중 어디부터 보는 게 좋나요?',
     a: '일정이 가장 긴 지역부터 확인한 뒤, 카테고리별 상세 페이지로 이동하면 동선과 문의 흐름을 빠르게 정리할 수 있습니다.',
   },
   {
@@ -54,7 +54,7 @@ const getThumbPosition = (position) => {
 };
 ---
 
-<BaseLayout title="태국 KTV·스파·클럽 예약 정보 | Thai Bam" description="방콕, 파타야, 푸켓 지역의 KTV, 스파, 클럽 예약 및 VIP 가이드 정보를 빠르게 확인하고 문의까지 연결할 수 있습니다.">
+<BaseLayout title="태국 KTV·스파·클럽 예약 정보 | Thai Bam" description="방콕, 파타야, 치앙마이 지역의 KTV, 스파, 클럽 예약 및 VIP 가이드 정보를 빠르게 확인하고 문의까지 연결할 수 있습니다.">
   <JsonLd data={jsonLd} />
 
   <div class="home-page">
@@ -66,7 +66,7 @@ const getThumbPosition = (position) => {
 
     <section class="home-hero reveal">
       <p class="hero-kicker">THAILAND NIGHT GUIDE</p>
-      <h1>방콕 · 파타야 · 푸켓 프리미엄 나이트라이프 가이드</h1>
+      <h1>방콕 · 파타야 · 치앙마이 프리미엄 나이트라이프 가이드</h1>
       <p class="hero-copy">
         Thai Bam은 태국 주요 지역의 KTV, 스파, 클럽 예약, VIP 가이드 정보를 정적 페이지로 정리한 디렉토리입니다.
         지역 페이지, 카테고리 페이지, 업체 상세 페이지를 내부 링크로 연결해 빠른 탐색과 문의 전환에 최적화했습니다.
@@ -75,8 +75,10 @@ const getThumbPosition = (position) => {
       <div class="hero-actions">
         <a href="/bangkok/">방콕 보기</a>
         <a href="/pattaya/">파타야 보기</a>
-        <a href="/phuket/">푸켓 보기</a>
+        <a href="/chiang-mai/">치앙마이 보기</a>
       </div>
+
+      <BannerSlot position="home_hero" />
 
       <div class="hero-cards">
         {heroVenues.map((venue) => (

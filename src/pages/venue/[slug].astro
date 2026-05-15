@@ -40,6 +40,37 @@ const getThumbPosition = (position) => {
 };
 const heroImagePosition = getThumbPosition(venue.data.thumbnailPosition);
 
+const getMapEmbedUrl = (mapUrl, latitude, longitude) => {
+  if (typeof latitude === 'number' && typeof longitude === 'number') {
+    return `https://www.google.com/maps?q=${latitude},${longitude}&output=embed`;
+  }
+
+  if (!mapUrl) return undefined;
+
+  try {
+    const parsed = new URL(mapUrl);
+    if (parsed.hostname.includes('google.') && parsed.pathname.includes('/maps/embed')) {
+      return parsed.toString();
+    }
+
+    const query = parsed.searchParams.get('q') ?? parsed.searchParams.get('query');
+    if (query) {
+      return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+    }
+  } catch {
+    return `https://www.google.com/maps?q=${encodeURIComponent(mapUrl)}&output=embed`;
+  }
+
+  return `https://www.google.com/maps?q=${encodeURIComponent(mapUrl)}&output=embed`;
+};
+
+const mapExternalUrl = venue.data.googleMapUrl
+  ? venue.data.googleMapUrl
+  : typeof venue.data.latitude === 'number' && typeof venue.data.longitude === 'number'
+    ? `https://maps.google.com/?q=${venue.data.latitude},${venue.data.longitude}`
+    : undefined;
+const mapEmbedUrl = getMapEmbedUrl(mapExternalUrl, venue.data.latitude, venue.data.longitude);
+
 const dedupe = new Set();
 const galleryItems = [
   { image: venue.data.thumbnail, alt: venue.data.thumbnailAlt },
@@ -149,6 +180,17 @@ const jsonLd = {
         <h2>상세 안내</h2>
         {venue.data.introBody && <p class="intro-body">{venue.data.introBody}</p>}
         <p class="location-text">{venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.'}</p>
+        {mapEmbedUrl && (
+          <div class="map-embed">
+            <iframe
+              title={`${venue.data.title} 위치`}
+              src={mapEmbedUrl}
+              loading="lazy"
+              allowfullscreen
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        )}
         <article class="venue-body">
           <Content />
         </article>
@@ -160,6 +202,9 @@ const jsonLd = {
       <a href={`/${venue.data.area}/`}>지역 페이지 이동</a>
       <a href={`/${venue.data.category}/`}>카테고리 페이지 이동</a>
       <a href={`/${venue.data.area}/${venue.data.category}/`}>지역+카테고리 이동</a>
+      {mapExternalUrl && (
+        <a href={mapExternalUrl} target="_blank" rel="noopener noreferrer nofollow">구글맵 위치 보기</a>
+      )}
     </aside>
   </section>
 
@@ -518,6 +563,21 @@ const jsonLd = {
   .location-text {
     color: #d7deef;
     line-height: 1.75;
+  }
+
+  .map-embed {
+    margin: 14px 0 8px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #0b0d13;
+  }
+
+  .map-embed iframe {
+    display: block;
+    width: 100%;
+    min-height: 280px;
+    border: 0;
   }
 
   .venue-body :global(h2),

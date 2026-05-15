@@ -40,7 +40,7 @@ collections:
         options:
           - { label: Bangkok, value: bangkok }
           - { label: Pattaya, value: pattaya }
-          - { label: Phuket, value: phuket }
+          - { label: Chiang Mai, value: chiang-mai }
 
       - label: 카테고리
         name: category
@@ -88,6 +88,7 @@ collections:
       - { label: 영업시간, name: openingHours, widget: string, required: false }
       - { label: 가격대, name: priceRange, widget: string, required: false }
       - { label: 위치 설명, name: addressText, widget: string, required: false }
+      - { label: 구글맵 링크, name: googleMapUrl, widget: string, required: false, hint: "Google Maps 공유 링크를 붙여넣으세요." }
 
       - { label: 카카오 문의 링크, name: kakaoUrl, widget: string, required: false }
       - { label: 라인 문의 링크, name: lineUrl, widget: string, required: false }
@@ -111,6 +112,7 @@ collections:
         name: position
         widget: select
         options:
+          - { label: 메인 히어로 (모바일 첫 화면), value: home_hero }
           - { label: 메인 상단, value: home_top }
           - { label: 메인 중간, value: home_middle }
           - { label: 지역 페이지 상단, value: area_top }

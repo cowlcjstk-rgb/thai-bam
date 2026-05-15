@@ -20,6 +20,7 @@ usageSteps:
   - title: "현장 방문"
     detail: "안내된 정보 기준으로 방문해 현장에서 최종 확인 후 이용합니다."
 addressText: "Bangkok central nightlife district"
+googleMapUrl: "https://maps.google.com/?q=13.7308,100.5418"
 openingHours: "20:00-03:30"
 priceRange: "$$$"
 visible: true

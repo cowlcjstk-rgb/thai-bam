@@ -46,6 +46,7 @@ const venues = defineCollection({
       detail: z.string(),
     })).default([]),
     addressText: z.string().optional(),
+    googleMapUrl: z.string().url().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     openingHours: z.string().optional(),
@@ -63,7 +64,7 @@ const banners = defineCollection({
   type: 'content',
   schema: z.object({
     title: z.string(),
-    position: z.enum(['home_top', 'home_middle', 'area_top', 'category_top', 'venue_top', 'venue_bottom']),
+    position: z.enum(['home_hero', 'home_top', 'home_middle', 'area_top', 'category_top', 'venue_top', 'venue_bottom']),
     image: z.string(),
     imageAlt: z.string().min(10),
     linkUrl: z.string().optional().default('#'),

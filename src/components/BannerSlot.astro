@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 
 interface Props {
-  position: 'home_top' | 'home_middle' | 'area_top' | 'category_top' | 'venue_top' | 'venue_bottom';
+  position: 'home_hero' | 'home_top' | 'home_middle' | 'area_top' | 'category_top' | 'venue_top' | 'venue_bottom';
 }
 
 const { position } = Astro.props;
@@ -23,7 +23,7 @@ const banners = (await getCollection('banners')).filter((b) => {
         alt={banner.data.imageAlt}
         width="1200"
         height="300"
-        loading={position === 'home_top' ? undefined : 'lazy'}
+        loading={position === 'home_hero' || position === 'home_top' ? undefined : 'lazy'}
       />
       {(banner.data.description || banner.data.buttonText) && (
         <div class="banner-overlay">
@@ -39,7 +39,7 @@ const banners = (await getCollection('banners')).filter((b) => {
         alt={banner.data.imageAlt}
         width="1200"
         height="300"
-        loading={position === 'home_top' ? undefined : 'lazy'}
+        loading={position === 'home_hero' || position === 'home_top' ? undefined : 'lazy'}
       />
       {(banner.data.description || banner.data.buttonText) && (
         <div class="banner-overlay">

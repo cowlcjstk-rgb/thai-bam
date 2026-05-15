@@ -21,6 +21,7 @@ usageSteps:
   - title: "방문 및 이용 시작"
     detail: "안내된 시간에 방문하여 최종 확인 후 이용을 시작합니다."
 addressText: "Bangkok central area"
+googleMapUrl: "https://maps.google.com/?q=13.7563,100.5018"
 openingHours: "18:00-03:00"
 priceRange: "$$"
 kakaoUrl: "https://open.kakao.com/o/example"

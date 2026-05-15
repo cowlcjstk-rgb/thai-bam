@@ -20,6 +20,7 @@ usageSteps:
   - title: "방문 이용"
     detail: "안내된 시간에 방문해 현장 확인 후 이용을 시작합니다."
 addressText: "Pattaya beach road nearby"
+googleMapUrl: "https://maps.google.com/?q=12.9236,100.8825"
 openingHours: "12:00-01:00"
 priceRange: "$$"
 visible: true
