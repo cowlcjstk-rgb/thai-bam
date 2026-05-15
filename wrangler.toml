@@ -1,5 +1,7 @@
 name = "thai-bam"
 compatibility_date = "2026-05-15"
+main = "worker.mjs"
 
 [assets]
+binding = "ASSETS"
 directory = "dist"
