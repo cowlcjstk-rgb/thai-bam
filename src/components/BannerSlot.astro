@@ -1,0 +1,21 @@
+﻿---
+import { getCollection } from 'astro:content';
+
+interface Props {
+  position: 'home_top' | 'home_middle' | 'area_top' | 'category_top' | 'venue_top' | 'venue_bottom';
+}
+
+const { position } = Astro.props;
+const now = new Date();
+const banners = (await getCollection('banners')).filter((b) => {
+  if (!b.data.visible || b.data.position !== position) return false;
+  if (b.data.startDate && b.data.startDate > now) return false;
+  if (b.data.endDate && b.data.endDate < now) return false;
+  return true;
+}).sort((a, b) => a.data.order - b.data.order);
+---
+{banners.map((banner) => (
+  <a href={banner.data.linkUrl} rel="sponsored nofollow" style="display:block;margin:16px 0;">
+    <img src={banner.data.image} alt={banner.data.imageAlt} width="1200" height="300" loading="lazy" />
+  </a>
+))}

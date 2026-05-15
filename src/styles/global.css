@@ -1,0 +1,18 @@
+﻿:root {
+  --bg: #f5f6f8;
+  --text: #141414;
+  --card: #ffffff;
+  --line: #e5e7eb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #fafbfc 0%, #f3f5f7 100%);
+}
+main { max-width: 1080px; margin: 0 auto; padding: 24px; }
+a { color: #0f766e; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }

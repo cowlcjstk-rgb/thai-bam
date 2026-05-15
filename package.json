@@ -1,0 +1,16 @@
+{
+  "name": "th-night",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.8.1",
+    "@astrojs/sitemap": "^3.6.0"
+  }
+}

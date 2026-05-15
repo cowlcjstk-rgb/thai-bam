@@ -1,0 +1,22 @@
+﻿---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import JsonLd from '../components/JsonLd.astro';
+import BannerSlot from '../components/BannerSlot.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const areas = await getCollection('areas');
+  return areas.map((area) => ({ params: { area: area.slug }, props: { area } }));
+}
+
+const { area } = Astro.props;
+const allVenues = (await getCollection('venues')).filter((v) => v.data.visible && v.data.area === area.slug);
+const categories = await getCollection('categories');
+const jsonLd = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: area.data.seoTitle, description: area.data.seoDescription, url: new URL(Astro.url.pathname, Astro.site).toString() };
+---
+<BaseLayout title={area.data.seoTitle} description={area.data.seoDescription} noindex={!area.data.indexable}>
+  <JsonLd data={jsonLd} />
+  <h1>{area.data.name} 지역 추천 업체</h1><p>{area.data.intro}</p><BannerSlot position="area_top" />
+  <h2>카테고리 바로가기</h2><div class="grid">{categories.map((c) => <a class="card" href={`/${area.slug}/${c.slug}/`}>{area.data.name} {c.data.name}</a>)}</div>
+  <h2>등록 업체</h2><div class="grid">{allVenues.map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
+</BaseLayout>
