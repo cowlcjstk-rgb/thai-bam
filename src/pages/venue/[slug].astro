@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import BannerSlot from '../../components/BannerSlot.astro';
+import ContactInquiryBanner from '../../components/ContactInquiryBanner.astro';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
@@ -19,6 +20,7 @@ const jsonLd = { '@context': 'https://schema.org', '@type': 'LocalBusiness', nam
 <BaseLayout title={venue.data.seoTitle} description={venue.data.seoDescription}>
   <JsonLd data={jsonLd} />
   <h1>{venue.data.title}</h1><p>{venue.data.shortDescription}</p><BannerSlot position="venue_top" />
+  <ContactInquiryBanner />
   <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="960" height="540" />
   <p>지역: {area?.data.name ?? venue.data.area}</p><p>카테고리: {category?.data.name ?? venue.data.category}</p>
   <p><a href={`/${venue.data.area}/`}>지역 페이지</a> | <a href={`/${venue.data.category}/`}>카테고리 페이지</a> | <a href={`/${venue.data.area}/${venue.data.category}/`}>지역+카테고리 페이지</a></p>

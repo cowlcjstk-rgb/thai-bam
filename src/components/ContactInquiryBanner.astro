@@ -1,0 +1,118 @@
+---
+interface Props {
+  kakaoUrl?: string;
+  lineUrl?: string;
+  telegramUrl?: string;
+}
+
+const { kakaoUrl, lineUrl, telegramUrl } = Astro.props;
+
+const channels = [
+  { name: '카카오톡 문의', url: kakaoUrl, className: 'kakao' },
+  { name: '라인 문의', url: lineUrl, className: 'line' },
+  { name: '텔레그램 문의', url: telegramUrl, className: 'telegram' },
+];
+---
+
+<section class="contact-banner" aria-label="문의 배너">
+  <p class="contact-banner-title">빠른 문의</p>
+  <p class="contact-banner-subtitle">카톡 / 라인 / 텔레그램 링크는 곧 추가됩니다.</p>
+
+  <div class="contact-banner-grid">
+    {channels.map((channel) =>
+      channel.url ? (
+        <a class={`contact-button ${channel.className}`} href={channel.url} target="_blank" rel="nofollow noopener noreferrer">
+          {channel.name}
+        </a>
+      ) : (
+        <button class={`contact-button ${channel.className}`} type="button" disabled>
+          {channel.name}
+          <span>링크 준비중</span>
+        </button>
+      )
+    )}
+  </div>
+</section>
+
+<style>
+  .contact-banner {
+    margin: 20px 0;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid #d6e4ff;
+    background: linear-gradient(140deg, #eff6ff 0%, #f8fafc 100%);
+  }
+
+  .contact-banner-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .contact-banner-subtitle {
+    margin: 6px 0 14px;
+    font-size: 0.93rem;
+    color: #475569;
+  }
+
+  .contact-banner-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .contact-button {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 72px;
+    border: 0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.18s ease, filter 0.18s ease;
+  }
+
+  .contact-button span {
+    margin-top: 4px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  .contact-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.95;
+  }
+
+  .contact-button:not(:disabled):hover {
+    transform: translateY(-2px);
+    filter: brightness(1.02);
+  }
+
+  .kakao {
+    background: #fee500;
+    color: #1a1a1a;
+  }
+
+  .line {
+    background: #06c755;
+    color: #ffffff;
+  }
+
+  .telegram {
+    background: #229ed9;
+    color: #ffffff;
+  }
+
+  @media (max-width: 720px) {
+    .contact-banner-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
