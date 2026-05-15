@@ -1,5 +1,10 @@
 import { defineCollection, z } from 'astro:content';
 
+const optionalDate = z.preprocess((value) => {
+  if (value === '' || value === null) return undefined;
+  return value;
+}, z.coerce.date().optional());
+
 const areas = defineCollection({
   type: 'content',
   schema: z.object({
@@ -99,8 +104,8 @@ const banners = defineCollection({
     buttonText: z.string().max(24).optional(),
     visible: z.boolean().default(true),
     order: z.number().default(100),
-    startDate: z.coerce.date().optional(),
-    endDate: z.coerce.date().optional(),
+    startDate: optionalDate,
+    endDate: optionalDate,
   }),
 });
 
