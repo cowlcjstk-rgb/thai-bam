@@ -14,23 +14,42 @@ const banners = (await getCollection('banners')).filter((b) => {
   return true;
 }).sort((a, b) => a.data.order - b.data.order);
 ---
-{banners.map((banner) => (
-  <a class="banner-card" href={banner.data.linkUrl} rel="sponsored nofollow">
-    <img
-      src={banner.data.image}
-      alt={banner.data.imageAlt}
-      width="1200"
-      height="300"
-      loading={position === 'home_top' ? undefined : 'lazy'}
-    />
-    {(banner.data.description || banner.data.buttonText) && (
-      <div class="banner-overlay">
-        {banner.data.description && <p>{banner.data.description}</p>}
-        {banner.data.buttonText && <span>{banner.data.buttonText}</span>}
-      </div>
-    )}
-  </a>
-))}
+{banners.map((banner) => {
+  const hasLink = Boolean(banner.data.linkUrl && banner.data.linkUrl !== '#');
+  return hasLink ? (
+    <a class="banner-card" href={banner.data.linkUrl} rel="sponsored nofollow">
+      <img
+        src={banner.data.image}
+        alt={banner.data.imageAlt}
+        width="1200"
+        height="300"
+        loading={position === 'home_top' ? undefined : 'lazy'}
+      />
+      {(banner.data.description || banner.data.buttonText) && (
+        <div class="banner-overlay">
+          {banner.data.description && <p>{banner.data.description}</p>}
+          {banner.data.buttonText && <span>{banner.data.buttonText}</span>}
+        </div>
+      )}
+    </a>
+  ) : (
+    <div class="banner-card is-static" aria-label={banner.data.title}>
+      <img
+        src={banner.data.image}
+        alt={banner.data.imageAlt}
+        width="1200"
+        height="300"
+        loading={position === 'home_top' ? undefined : 'lazy'}
+      />
+      {(banner.data.description || banner.data.buttonText) && (
+        <div class="banner-overlay">
+          {banner.data.description && <p>{banner.data.description}</p>}
+          {banner.data.buttonText && <span>{banner.data.buttonText}</span>}
+        </div>
+      )}
+    </div>
+  );
+})}
 
 <style>
   .banner-card {
@@ -40,6 +59,10 @@ const banners = (await getCollection('banners')).filter((b) => {
     border-radius: 14px;
     overflow: hidden;
     border: 1px solid #e5e7eb;
+  }
+
+  .banner-card.is-static {
+    cursor: default;
   }
 
   .banner-card img {

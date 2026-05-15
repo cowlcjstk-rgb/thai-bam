@@ -7,31 +7,647 @@ import { getCollection } from 'astro:content';
 const areas = (await getCollection('areas')).sort((a, b) => a.data.order - b.data.order);
 const categories = (await getCollection('categories')).sort((a, b) => a.data.order - b.data.order);
 const venues = (await getCollection('venues')).filter((v) => v.data.visible).sort((a, b) => a.data.order - b.data.order);
-const categoryExamples = categories
+
+const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
+const featuredVenues = venues.filter((v) => v.data.featured).slice(0, 4);
+const heroVenues = featuredVenues.length > 0 ? featuredVenues : latestVenues.slice(0, 4);
+const categoryHighlights = categories
   .map((category) => {
-    const sample = venues.find((venue) => venue.data.category === category.slug);
+    const sample = latestVenues.find((venue) => venue.data.category === category.slug);
     return sample ? { category, sample } : null;
   })
   .filter(Boolean);
 
-const jsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: '브랜드명', url: new URL('/', Astro.site).toString(), inLanguage: 'ko' };
+const faqItems = [
+  {
+    q: '방콕, 파타야, 푸켓 중 어디부터 보는 게 좋나요?',
+    a: '일정이 가장 긴 지역부터 확인한 뒤, 카테고리별 상세 페이지로 이동하면 동선과 문의 흐름을 빠르게 정리할 수 있습니다.',
+  },
+  {
+    q: '업체 상세 페이지에서 무엇을 먼저 확인해야 하나요?',
+    a: '영업시간, 가격대, 위치 안내, 문의 버튼 순서로 확인하면 이용 전 핵심 정보를 빠르게 파악할 수 있습니다.',
+  },
+  {
+    q: '문의 링크가 아직 없는 경우도 있나요?',
+    a: '네. 운영 중인 채널만 우선 노출하며, 준비 중인 채널은 순차적으로 업데이트됩니다.',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Thai Bam',
+  url: new URL('/', Astro.site).toString(),
+  inLanguage: 'ko',
+};
+
+const formatDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+};
 ---
-<BaseLayout title="태국 KTV·스파·클럽 예약 정보 | 브랜드명" description="방콕, 파타야, 푸켓 지역의 KTV, 스파, 클럽 예약 및 VIP 가이드 정보를 한곳에서 확인하세요.">
+
+<BaseLayout title="태국 KTV·스파·클럽 예약 정보 | Thai Bam" description="방콕, 파타야, 푸켓 지역의 KTV, 스파, 클럽 예약 및 VIP 가이드 정보를 빠르게 확인하고 문의까지 연결할 수 있습니다.">
   <JsonLd data={jsonLd} />
-  <h1>태국 지역별 KTV, 스파, 클럽, VIP 가이드 정보</h1>
-  <p>방콕, 파타야, 푸켓 지역에서 찾을 수 있는 KTV, 스파, 클럽 예약, VIP 가이드 정보를 한눈에 확인할 수 있도록 정리했습니다.</p>
-  <BannerSlot position="home_top" />
-  <h2>주요 지역</h2><div class="grid">{areas.map((area) => <a class="card" href={`/${area.slug}/`}>{area.data.name}</a>)}</div>
-  <h2>주요 카테고리</h2><div class="grid">{categories.map((c) => <a class="card" href={`/${c.slug}/`}>{c.data.name}</a>)}</div>
-  <BannerSlot position="home_middle" />
-  <h2>카테고리별 예시 글</h2>
-  <div class="grid">
-    {categoryExamples.map((item) => (
-      <a class="card" href={`/venue/${item.sample.slug}/`}>
-        <strong>{item.category.data.name}</strong>
-        <p>{item.sample.data.title}</p>
-      </a>
-    ))}
+
+  <div class="home-page">
+    <div class="top-browser-bar reveal">
+      <span class="dot" aria-hidden="true"></span>
+      <p>thai-bam.mkmdtkvypy.workers.dev</p>
+      <span class="badge">LIVE</span>
+    </div>
+
+    <section class="home-hero reveal">
+      <p class="hero-kicker">THAILAND NIGHT GUIDE</p>
+      <h1>방콕 · 파타야 · 푸켓 프리미엄 나이트라이프 가이드</h1>
+      <p class="hero-copy">
+        Thai Bam은 태국 주요 지역의 KTV, 스파, 클럽 예약, VIP 가이드 정보를 정적 페이지로 정리한 디렉토리입니다.
+        지역 페이지, 카테고리 페이지, 업체 상세 페이지를 내부 링크로 연결해 빠른 탐색과 문의 전환에 최적화했습니다.
+      </p>
+
+      <div class="hero-actions">
+        <a href="/bangkok/">방콕 보기</a>
+        <a href="/pattaya/">파타야 보기</a>
+        <a href="/phuket/">푸켓 보기</a>
+      </div>
+
+      <div class="hero-cards">
+        {heroVenues.map((venue) => (
+          <a class="hero-card" href={`/venue/${venue.slug}/`}>
+            <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="640" height="380" loading="lazy" />
+            <div>
+              <strong>{venue.data.title}</strong>
+              <p>{venue.data.shortDescription}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <BannerSlot position="home_top" />
+
+    <section class="section-strip reveal">
+      <h2>게시물</h2>
+    </section>
+
+    <section class="post-feed reveal">
+      <div class="post-feed-head">
+        <h2>All Posts</h2>
+        <span>{latestVenues.length} entries</span>
+      </div>
+
+      <div class="post-grid">
+        {latestVenues.slice(0, 8).map((venue) => (
+          <article class="post-card reveal">
+            <a href={`/venue/${venue.slug}/`}>
+              <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1200" height="700" loading="lazy" />
+              <div class="post-body">
+                <p class="post-meta">
+                  {formatDate(venue.data.updatedAt)} · {venue.data.area} · {venue.data.category}
+                </p>
+                <h3>{venue.data.title}</h3>
+                <p>{venue.data.shortDescription}</p>
+              </div>
+            </a>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="quick-links reveal">
+      <h2>카테고리 바로가기</h2>
+      <div class="chip-grid">
+        {categories.map((category) => (
+          <a href={`/${category.slug}/`}>{category.data.name}</a>
+        ))}
+      </div>
+    </section>
+
+    <section class="area-grid reveal">
+      <h2>지역별 탐색</h2>
+      <div class="area-cards">
+        {areas.map((area) => {
+          const areaVenues = venues.filter((venue) => venue.data.area === area.slug).slice(0, 3);
+          return (
+            <article class="area-card">
+              <h3>{area.data.name}</h3>
+              <p>{area.data.intro}</p>
+              <div class="area-links">
+                <a href={`/${area.slug}/`}>지역 페이지</a>
+                {areaVenues.map((venue) => (
+                  <a href={`/venue/${venue.slug}/`}>{venue.data.title}</a>
+                ))}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+
+    <BannerSlot position="home_middle" />
+
+    <section class="category-showcase reveal">
+      <h2>카테고리 대표 글</h2>
+      <div class="category-list">
+        {categoryHighlights.map((item) => (
+          <a class="category-item" href={`/venue/${item.sample.slug}/`}>
+            <img src={item.sample.data.thumbnail} alt={item.sample.data.thumbnailAlt} width="900" height="560" loading="lazy" />
+            <div>
+              <p>{item.category.data.name}</p>
+              <h3>{item.sample.data.title}</h3>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="seo-copy reveal">
+      <h2>태국 지역별 KTV, 스파, 클럽, VIP 가이드 정보</h2>
+      <p>
+        메인 랜딩은 지역 페이지와 카테고리 페이지를 동시에 안내하며, 각 업체 상세 페이지는 단일 정규 URL로 연결합니다.
+        중복 URL을 최소화하고, title/description/canonical/내부 링크 구조를 유지해 검색엔진이 페이지 주제를 정확히 이해하도록 구성했습니다.
+      </p>
+      <p>
+        신규 등록 업체는 최신 등록 영역과 카테고리 대표 글 영역에 반영되어 탐색 경로를 단순화합니다.
+        이용자는 지역 → 카테고리 → 업체 상세 순서로 이동하면서 영업시간, 가격대, 문의 채널을 빠르게 확인할 수 있습니다.
+      </p>
+    </section>
+
+    <section class="faq reveal">
+      <h2>자주 묻는 질문</h2>
+      <div class="faq-grid">
+        {faqItems.map((item) => (
+          <article>
+            <h3>{item.q}</h3>
+            <p>{item.a}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   </div>
-  <h2>추천 업체</h2><div class="grid">{venues.slice(0, 6).map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
+
+  <script type="module">
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.14 }
+    );
+
+    reveals.forEach((item) => observer.observe(item));
+  </script>
 </BaseLayout>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Saira+Semi+Condensed:wght@400;600;700;800&display=swap');
+
+  :global(body) {
+    margin: 0;
+    color: #f7f7f7;
+    background:
+      radial-gradient(1200px 500px at 10% -10%, rgba(255, 0, 128, 0.24), transparent 60%),
+      radial-gradient(1000px 420px at 90% -20%, rgba(0, 255, 224, 0.18), transparent 62%),
+      #050507;
+    font-family: 'Saira Semi Condensed', 'Noto Sans KR', sans-serif;
+  }
+
+  :global(main) {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 14px 14px 84px;
+  }
+
+  .home-page {
+    display: grid;
+    gap: 16px;
+  }
+
+  .top-browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    background: rgba(10, 10, 12, 0.92);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .top-browser-bar p {
+    margin: 0;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    color: #eceff5;
+    flex: 1;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #ffe600;
+    box-shadow: 0 0 12px #ffe600;
+  }
+
+  .badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #121319;
+    border: 1px solid #323545;
+    color: #67faff;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .home-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 22px;
+    padding: 20px;
+    background:
+      linear-gradient(165deg, rgba(0, 0, 0, 0.85) 0%, rgba(13, 13, 17, 0.95) 45%, rgba(24, 24, 30, 0.92) 100%);
+  }
+
+  .home-hero::before {
+    content: '';
+    position: absolute;
+    inset: -35% auto auto -30%;
+    width: 420px;
+    height: 420px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(255, 0, 145, 0.35) 0%, rgba(255, 0, 145, 0) 70%);
+    pointer-events: none;
+  }
+
+  .home-hero::after {
+    content: '';
+    position: absolute;
+    inset: auto -20% -40% auto;
+    width: 420px;
+    height: 420px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(0, 255, 238, 0.25) 0%, rgba(0, 255, 238, 0) 68%);
+    pointer-events: none;
+  }
+
+  .hero-kicker {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #ffe600;
+  }
+
+  .home-hero h1 {
+    margin: 8px 0 10px;
+    font-size: clamp(1.7rem, 5.4vw, 2.9rem);
+    line-height: 1.14;
+    color: #ff3fb2;
+    text-wrap: balance;
+  }
+
+  .hero-copy {
+    margin: 0;
+    max-width: 820px;
+    line-height: 1.72;
+    font-size: 1rem;
+    color: #e6e9f2;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .hero-actions a {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #f8fbff;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.06);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .hero-actions a:hover {
+    transform: translateY(-1px);
+    border-color: #67faff;
+  }
+
+  .hero-cards {
+    margin-top: 18px;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .hero-card {
+    position: relative;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: #0d0e13;
+  }
+
+  .hero-card img {
+    width: 100%;
+    height: 138px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hero-card div {
+    padding: 10px;
+  }
+
+  .hero-card strong {
+    display: block;
+    color: #ffe600;
+    font-size: 0.95rem;
+  }
+
+  .hero-card p {
+    margin: 5px 0 0;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: #d6d9e3;
+  }
+
+  .section-strip {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #00ebff;
+    color: #031018;
+  }
+
+  .section-strip h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    letter-spacing: 0.01em;
+  }
+
+  .post-feed {
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(5, 6, 8, 0.9);
+  }
+
+  .post-feed-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .post-feed-head h2 {
+    margin: 0;
+    font-size: 2rem;
+    color: #f8f8f8;
+  }
+
+  .post-feed-head span {
+    color: #a8afc0;
+    font-size: 0.9rem;
+  }
+
+  .post-grid {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+
+  .post-card {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #090a0f;
+  }
+
+  .post-card a {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .post-card img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .post-body {
+    padding: 12px;
+  }
+
+  .post-meta {
+    margin: 0;
+    color: #9ca5ba;
+    font-size: 0.8rem;
+  }
+
+  .post-body h3 {
+    margin: 7px 0 8px;
+    font-size: 1.28rem;
+    line-height: 1.32;
+    color: #ff2ea5;
+  }
+
+  .post-body p {
+    margin: 0;
+    line-height: 1.6;
+    color: #e0e5f2;
+  }
+
+  .quick-links,
+  .area-grid,
+  .category-showcase,
+  .seo-copy,
+  .faq {
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 18px;
+    background: rgba(8, 9, 12, 0.9);
+  }
+
+  .quick-links h2,
+  .area-grid h2,
+  .category-showcase h2,
+  .seo-copy h2,
+  .faq h2 {
+    margin: 0 0 12px;
+    font-size: 1.4rem;
+    color: #ffe600;
+  }
+
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip-grid a {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    padding: 9px 12px;
+    text-decoration: none;
+    color: #eef3ff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .area-cards {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .area-card {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    padding: 12px;
+    background: #090a10;
+  }
+
+  .area-card h3 {
+    margin: 0;
+    color: #ff46b6;
+    font-size: 1.25rem;
+  }
+
+  .area-card p {
+    margin: 8px 0 10px;
+    color: #dde3f1;
+    line-height: 1.65;
+  }
+
+  .area-links {
+    display: grid;
+    gap: 6px;
+  }
+
+  .area-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    border-radius: 10px;
+    padding: 0 10px;
+    text-decoration: none;
+    color: #eaf5ff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .category-list {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+
+  .category-item {
+    display: block;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    text-decoration: none;
+    color: inherit;
+    background: #0b0c12;
+  }
+
+  .category-item img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .category-item div {
+    padding: 10px;
+  }
+
+  .category-item p {
+    margin: 0;
+    color: #67faff;
+    font-size: 0.84rem;
+  }
+
+  .category-item h3 {
+    margin: 6px 0 0;
+    color: #f6f7fb;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .seo-copy p,
+  .faq p {
+    margin: 0 0 10px;
+    line-height: 1.78;
+    color: #dbe0eb;
+  }
+
+  .faq-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .faq-grid article {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 12px;
+    background: #0b0c11;
+  }
+
+  .faq-grid h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: #f9fcff;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 780px) {
+    :global(main) {
+      padding-inline: 10px;
+    }
+
+    .home-hero {
+      padding: 16px;
+    }
+
+    .post-feed-head h2 {
+      font-size: 1.7rem;
+    }
+
+    .post-card img {
+      height: 170px;
+    }
+  }
+</style>

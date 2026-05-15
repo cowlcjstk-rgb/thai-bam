@@ -4,110 +4,119 @@ backend:
   branch: main
   base_url: https://thai-bam.mkmdtkvypy.workers.dev
   auth_endpoint: oauth
+  commit_messages:
+    create: "cms(create): {{collection}} {{slug}}"
+    update: "cms(update): {{collection}} {{slug}}"
+    delete: "cms(delete): {{collection}} {{slug}}"
+    uploadMedia: "cms(media): upload {{path}}"
+    deleteMedia: "cms(media): delete {{path}}"
 
+site_url: https://thai-bam.mkmdtkvypy.workers.dev
+display_url: https://thai-bam.mkmdtkvypy.workers.dev
+locale: ko
 media_folder: "public/uploads"
 public_folder: "/uploads"
-publish_mode: editorial_workflow
+publish_mode: simple
 
 slug:
-  encoding: "ascii"
+  encoding: ascii
   clean_accents: true
   sanitize_replacement: "-"
 
 collections:
-  - name: "venues"
-    label: "업체 글 관리"
-    folder: "src/content/venues"
+  - name: venues
+    label: 업체 글 관리
+    folder: src/content/venues
     create: true
     slug: "{{fields.slug}}"
     summary: "{{title}} - {{area}} / {{category}}"
     fields:
-      - { label: "업체명", name: "title", widget: "string" }
-      - { label: "파일 슬러그", name: "slug", widget: "string", hint: "예: sample-ktv-bangkok" }
+      - { label: 업체명, name: title, widget: string }
+      - { label: URL 슬러그, name: slug, widget: string, hint: "예: sample-ktv-bangkok" }
 
-      - label: "지역"
-        name: "area"
-        widget: "select"
+      - label: 지역
+        name: area
+        widget: select
         options:
-          - { label: "Bangkok", value: "bangkok" }
-          - { label: "Pattaya", value: "pattaya" }
-          - { label: "Phuket", value: "phuket" }
+          - { label: Bangkok, value: bangkok }
+          - { label: Pattaya, value: pattaya }
+          - { label: Phuket, value: phuket }
 
-      - label: "카테고리"
-        name: "category"
-        widget: "select"
+      - label: 카테고리
+        name: category
+        widget: select
         options:
-          - { label: "KTV & Karaoke", value: "ktv-karaoke" }
-          - { label: "Spa & Massage", value: "spa-massage" }
-          - { label: "Club Reservation", value: "club-reservation" }
-          - { label: "VIP Guide", value: "vip-guide" }
+          - { label: "KTV & Karaoke", value: ktv-karaoke }
+          - { label: "Spa & Massage", value: spa-massage }
+          - { label: "Club Reservation", value: club-reservation }
+          - { label: "VIP Guide", value: vip-guide }
 
-      - { label: "요약 소개", name: "shortDescription", widget: "text", hint: "상단 요약 텍스트(40~180자 권장)" }
-      - { label: "상세 소개 본문", name: "introBody", widget: "text", required: false, hint: "SEO용 본문 강화 텍스트" }
+      - { label: 요약 소개, name: shortDescription, widget: text, hint: "40~180자 권장" }
+      - { label: 상단 본문 소개, name: introBody, widget: text, required: false, hint: "상세 페이지 상단에 노출되는 SEO 본문" }
 
-      - label: "이용 순서 타임라인"
-        name: "usageSteps"
-        widget: "list"
+      - label: 이용 순서 타임라인
+        name: usageSteps
+        widget: list
         required: false
         summary: "{{fields.title}}"
         fields:
-          - { label: "단계 제목", name: "title", widget: "string" }
-          - { label: "단계 설명", name: "detail", widget: "text" }
+          - { label: 단계 제목, name: title, widget: string }
+          - { label: 단계 설명, name: detail, widget: text }
 
-      - { label: "SEO 제목", name: "seoTitle", widget: "string" }
-      - { label: "SEO 설명", name: "seoDescription", widget: "text" }
+      - { label: SEO 제목, name: seoTitle, widget: string }
+      - { label: SEO 설명, name: seoDescription, widget: text }
 
-      - { label: "대표 이미지", name: "thumbnail", widget: "image" }
-      - { label: "대표 이미지 ALT", name: "thumbnailAlt", widget: "string" }
+      - { label: 대표 이미지, name: thumbnail, widget: image }
+      - { label: 대표 이미지 ALT, name: thumbnailAlt, widget: string }
 
-      - label: "갤러리"
-        name: "gallery"
-        widget: "list"
+      - label: 갤러리
+        name: gallery
+        widget: list
         required: false
         fields:
-          - { label: "이미지", name: "image", widget: "image" }
-          - { label: "ALT 텍스트", name: "alt", widget: "string" }
+          - { label: 이미지, name: image, widget: image }
+          - { label: 이미지 ALT, name: alt, widget: string }
 
-      - { label: "영업시간", name: "openingHours", widget: "string", required: false }
-      - { label: "가격대", name: "priceRange", widget: "string", required: false }
-      - { label: "위치 설명", name: "addressText", widget: "string", required: false }
+      - { label: 영업시간, name: openingHours, widget: string, required: false }
+      - { label: 가격대, name: priceRange, widget: string, required: false }
+      - { label: 위치 설명, name: addressText, widget: string, required: false }
 
-      - { label: "카카오 링크", name: "kakaoUrl", widget: "string", required: false }
-      - { label: "라인 링크", name: "lineUrl", widget: "string", required: false }
+      - { label: 카카오 문의 링크, name: kakaoUrl, widget: string, required: false }
+      - { label: 라인 문의 링크, name: lineUrl, widget: string, required: false }
 
-      - { label: "추천 노출", name: "featured", widget: "boolean", default: false }
-      - { label: "노출 여부", name: "visible", widget: "boolean", default: true }
-      - { label: "정렬 순서", name: "order", widget: "number", default: 100 }
-      - { label: "수정일", name: "updatedAt", widget: "datetime" }
-      - { label: "상세 본문", name: "body", widget: "markdown" }
+      - { label: 추천 노출, name: featured, widget: boolean, default: false }
+      - { label: 노출 여부, name: visible, widget: boolean, default: true }
+      - { label: 정렬 순서, name: order, widget: number, default: 100 }
+      - { label: 수정일, name: updatedAt, widget: datetime }
+      - { label: 상세 본문, name: body, widget: markdown }
 
-  - name: "banners"
-    label: "홈페이지 배너 설정"
-    folder: "src/content/banners"
+  - name: banners
+    label: 홈페이지 배너 설정
+    folder: src/content/banners
     create: true
     slug: "{{fields.position}}-{{fields.title}}"
     summary: "{{title}} ({{position}})"
     fields:
-      - { label: "배너명", name: "title", widget: "string" }
+      - { label: 배너명, name: title, widget: string }
 
-      - label: "노출 위치"
-        name: "position"
-        widget: "select"
+      - label: 노출 위치
+        name: position
+        widget: select
         options:
-          - { label: "메인 상단", value: "home_top" }
-          - { label: "메인 중간", value: "home_middle" }
-          - { label: "지역 페이지 상단", value: "area_top" }
-          - { label: "카테고리 페이지 상단", value: "category_top" }
-          - { label: "업체 상세 상단", value: "venue_top" }
-          - { label: "업체 상세 하단", value: "venue_bottom" }
+          - { label: 메인 상단, value: home_top }
+          - { label: 메인 중간, value: home_middle }
+          - { label: 지역 페이지 상단, value: area_top }
+          - { label: 카테고리 페이지 상단, value: category_top }
+          - { label: 업체 상세 상단, value: venue_top }
+          - { label: 업체 상세 하단, value: venue_bottom }
 
-      - { label: "배너 이미지", name: "image", widget: "image" }
-      - { label: "이미지 ALT", name: "imageAlt", widget: "string" }
-      - { label: "배너 설명", name: "description", widget: "string", required: false }
-      - { label: "버튼 문구", name: "buttonText", widget: "string", required: false }
-      - { label: "클릭 링크", name: "linkUrl", widget: "string" }
+      - { label: 배너 이미지, name: image, widget: image }
+      - { label: 이미지 ALT, name: imageAlt, widget: string }
+      - { label: 배너 설명, name: description, widget: string, required: false }
+      - { label: 버튼 문구, name: buttonText, widget: string, required: false }
+      - { label: 클릭 링크, name: linkUrl, widget: string, required: false, default: "#" }
 
-      - { label: "노출 여부", name: "visible", widget: "boolean", default: true }
-      - { label: "정렬 순서", name: "order", widget: "number", default: 100 }
-      - { label: "시작일", name: "startDate", widget: "datetime", required: false }
-      - { label: "종료일", name: "endDate", widget: "datetime", required: false }
+      - { label: 노출 여부, name: visible, widget: boolean, default: true }
+      - { label: 정렬 순서, name: order, widget: number, default: 100 }
+      - { label: 시작일, name: startDate, widget: datetime, required: false }
+      - { label: 종료일, name: endDate, widget: datetime, required: false }

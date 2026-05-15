@@ -7,10 +7,10 @@ shortDescription: "방콕 중심 접근성이 좋은 KTV 공간으로, 기본 �
 introBody: "Sample KTV Bangkok은 방콕 중심 이동 동선에 맞춘 이용 가이드를 제공하며, 이용 전에 영업시간, 위치 안내, 문의 채널을 먼저 확인할 수 있도록 정보를 정리합니다. 예약 전 체크 포인트를 본문에서 자세히 확인하고, 카카오톡 또는 라인으로 문의하면 빠르게 안내받을 수 있습니다."
 seoTitle: "Sample KTV Bangkok | 방콕 KTV 정보"
 seoDescription: "Sample KTV Bangkok의 위치, 영업시간, 이미지, 연락 방법 및 예약 문의 정보를 확인하세요."
-thumbnail: "/uploads/sample-ktv-bangkok-main.webp"
+thumbnail: "https://picsum.photos/seed/sample-ktv-bangkok-main/1200/700"
 thumbnailAlt: "방콕 KTV Sample 대표 이미지"
 gallery:
-  - image: "/uploads/sample-ktv-bangkok-room.webp"
+  - image: "https://picsum.photos/seed/sample-ktv-bangkok-room/1200/700"
     alt: "방콕 KTV Sample의 메인 라운지 공간"
 usageSteps:
   - title: "1차 문의 접수"

@@ -65,7 +65,7 @@ const banners = defineCollection({
     position: z.enum(['home_top', 'home_middle', 'area_top', 'category_top', 'venue_top', 'venue_bottom']),
     image: z.string(),
     imageAlt: z.string().min(10),
-    linkUrl: z.string(),
+    linkUrl: z.string().optional().default('#'),
     description: z.string().max(120).optional(),
     buttonText: z.string().max(24).optional(),
     visible: z.boolean().default(true),

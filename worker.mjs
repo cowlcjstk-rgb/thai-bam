@@ -110,6 +110,15 @@ export default {
         return oauthError(message);
       }
 
+      const scopes = String(payload.scope || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      if (!scopes.includes("repo")) {
+        return oauthError("GitHub OAuth App(repo scope)로 로그인해 주세요. GitHub App 토큰으로는 저장 권한이 부족할 수 있습니다.");
+      }
+
       const content = {
         token: payload.access_token,
         provider: "github",

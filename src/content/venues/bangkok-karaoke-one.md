@@ -6,7 +6,7 @@ category: "ktv-karaoke"
 shortDescription: "방콕 내 이동이 편한 위치에 있으며 문의 응답이 빠른 편이라 일정 확정 전에 기본 정보를 확인하기 좋습니다."
 seoTitle: "Bangkok Karaoke One | 방콕 KTV 정보"
 seoDescription: "Bangkok Karaoke One의 위치, 운영 안내, 문의 정보를 확인하세요."
-thumbnail: "/uploads/bangkok-karaoke-one-main.webp"
+thumbnail: "https://picsum.photos/seed/bangkok-karaoke-one-main/1200/700"
 thumbnailAlt: "Bangkok Karaoke One 대표 이미지"
 gallery: []
 openingHours: "19:00-02:00"
