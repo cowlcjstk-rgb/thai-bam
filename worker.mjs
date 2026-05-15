@@ -6,6 +6,7 @@ const ADMIN_SESSION_COOKIE = "thai_bam_admin_session";
 const ADMIN_SESSION_TTL = 60 * 60 * 12;
 const ADMIN_ENTRY_QUERY_KEY = "admin_auth";
 const ADMIN_ENTRY_QUERY_VALUE = "1";
+const CMS_GITHUB_TOKEN_ENV_KEYS = ["GITHUB_CMS_TOKEN", "GITHUB_PAT", "GITHUB_ACCESS_TOKEN"];
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -134,6 +135,36 @@ function isProtectedPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/oauth" || pathname.startsWith("/oauth/");
 }
 
+function getCmsGithubToken(env) {
+  for (const key of CMS_GITHUB_TOKEN_ENV_KEYS) {
+    const value = env[key];
+    if (value && String(value).trim()) return String(value).trim();
+  }
+  return "";
+}
+
+function oauthSuccessScript(url, token) {
+  const content = {
+    token,
+    provider: "github",
+  };
+  const message = `authorization:github:success:${JSON.stringify(content)}`;
+  return html(
+    `<script>
+      if (window.opener) {
+        window.opener.postMessage("authorizing:github", window.location.origin);
+        window.opener.postMessage(${JSON.stringify(message)}, window.location.origin);
+      }
+      window.close();
+    </script>`,
+    200,
+    {
+      "set-cookie": `${STATE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,
+      "cache-control": "no-store",
+    }
+  );
+}
+
 function loginPage(url, errorMessage = "") {
   const nextPath = sanitizeNextPath(url.searchParams.get("next"));
   return html(
@@ -176,6 +207,10 @@ function redirectToLogin(url) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (isAdminEntryPath(url.pathname) && request.method === "GET" && url.searchParams.get(ADMIN_ENTRY_QUERY_KEY) !== ADMIN_ENTRY_QUERY_VALUE) {
+      return loginPage(url);
+    }
 
     if (url.pathname === "/admin-login") {
       if (request.method === "GET") {
@@ -226,18 +261,26 @@ export default {
     if (isProtectedPath(url.pathname)) {
       const sessionValid = await isAdminSessionValid(request, env);
       if (!sessionValid) {
+        if (isAdminEntryPath(url.pathname) && request.method === "GET") {
+          return loginPage(url);
+        }
         return redirectToLogin(url);
       }
 
       if (isAdminEntryPath(url.pathname) && url.searchParams.get(ADMIN_ENTRY_QUERY_KEY) !== ADMIN_ENTRY_QUERY_VALUE) {
-        return redirectToLogin(url);
+        return loginPage(url);
       }
     }
 
     if (url.pathname === "/oauth") {
+      const directToken = getCmsGithubToken(env);
+      if (directToken) {
+        return oauthSuccessScript(url, directToken);
+      }
+
       const clientId = env.GITHUB_OAUTH_CLIENT_ID;
       if (!clientId) {
-        return oauthError("Missing GITHUB_OAUTH_CLIENT_ID runtime secret.");
+        return oauthError("Missing OAuth config. Set GITHUB_OAUTH_CLIENT_ID or use GITHUB_CMS_TOKEN.");
       }
 
       const state = crypto.randomUUID().replace(/-/g, "");
@@ -309,21 +352,7 @@ export default {
         return oauthError("Please login via GitHub OAuth App with repo scope. GitHub App token may not have write permission.");
       }
 
-      const content = {
-        token: payload.access_token,
-        provider: "github",
-      };
-
-      const message = `authorization:github:success:${JSON.stringify(content)}`;
-      return html(
-        `<script>
-          if (window.opener) {
-            window.opener.postMessage("authorizing:github", window.location.origin);
-            window.opener.postMessage(${JSON.stringify(message)}, window.location.origin);
-          }
-          window.close();
-        </script>`
-      );
+      return oauthSuccessScript(url, payload.access_token);
     }
 
     return env.ASSETS.fetch(request);
