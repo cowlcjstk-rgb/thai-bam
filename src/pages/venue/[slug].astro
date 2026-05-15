@@ -1,4 +1,4 @@
-﻿---
+---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import BannerSlot from '../../components/BannerSlot.astro';
@@ -7,23 +7,682 @@ import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
   const venues = await getCollection('venues');
-  return venues.filter((v) => v.data.visible).map((venue) => ({ params: { slug: venue.slug }, props: { venue } }));
+  return venues
+    .filter((v) => v.data.visible)
+    .map((venue) => ({ params: { slug: venue.slug }, props: { venue } }));
 }
 
 const { venue } = Astro.props;
-const [areas, categories, venues] = await Promise.all([getCollection('areas'), getCollection('categories'), getCollection('venues')]);
+const [areas, categories, venues] = await Promise.all([
+  getCollection('areas'),
+  getCollection('categories'),
+  getCollection('venues'),
+]);
+
 const area = areas.find((a) => a.slug === venue.data.area);
 const category = categories.find((c) => c.slug === venue.data.category);
-const related = venues.filter((v) => v.data.visible && v.slug !== venue.slug && v.data.area === venue.data.area).slice(0, 4);
-const jsonLd = { '@context': 'https://schema.org', '@type': 'LocalBusiness', name: venue.data.title, description: venue.data.shortDescription, image: [new URL(venue.data.thumbnail, Astro.site).toString()], url: new URL(`/venue/${venue.slug}/`, Astro.site).toString() };
+
+const related = venues
+  .filter((v) => v.data.visible && v.slug !== venue.slug && v.data.area === venue.data.area)
+  .slice(0, 6);
+
+const fallbackSteps = [
+  { title: '문의 접수', detail: '카카오톡 또는 라인으로 원하는 날짜와 시간대를 먼저 전달해 주세요.' },
+  { title: '이용 안내 확인', detail: '가능 시간, 위치, 기본 이용 가이드를 확인한 뒤 진행 여부를 결정합니다.' },
+  { title: '방문 및 이용', detail: '안내된 시간에 방문하여 현장에서 최종 확인 후 이용을 시작합니다.' },
+];
+
+const timelineSteps = venue.data.usageSteps.length > 0 ? venue.data.usageSteps : fallbackSteps;
+
+const dedupe = new Set();
+const galleryItems = [
+  { image: venue.data.thumbnail, alt: venue.data.thumbnailAlt },
+  ...venue.data.gallery,
+].filter((item) => {
+  if (dedupe.has(item.image)) return false;
+  dedupe.add(item.image);
+  return true;
+});
+
+const { Content } = await venue.render();
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: venue.data.title,
+  description: venue.data.shortDescription,
+  image: [new URL(venue.data.thumbnail, Astro.site).toString()],
+  url: new URL(`/venue/${venue.slug}/`, Astro.site).toString(),
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: area?.data.name ?? venue.data.area,
+    addressCountry: 'TH',
+  },
+  priceRange: venue.data.priceRange || '$$',
+};
 ---
+
 <BaseLayout title={venue.data.seoTitle} description={venue.data.seoDescription}>
   <JsonLd data={jsonLd} />
-  <h1>{venue.data.title}</h1><p>{venue.data.shortDescription}</p><BannerSlot position="venue_top" />
-  <ContactInquiryBanner kakaoUrl={venue.data.kakaoUrl} lineUrl={venue.data.lineUrl} />
-  <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="960" height="540" />
-  <p>지역: {area?.data.name ?? venue.data.area}</p><p>카테고리: {category?.data.name ?? venue.data.category}</p>
-  <p><a href={`/${venue.data.area}/`}>지역 페이지</a> | <a href={`/${venue.data.category}/`}>카테고리 페이지</a> | <a href={`/${venue.data.area}/${venue.data.category}/`}>지역+카테고리 페이지</a></p>
-  <h2>관련 업체</h2><div class="grid">{related.map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
+
+  <section class="venue-hero reveal">
+    <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1400" height="820" loading="eager" />
+    <div class="hero-overlay">
+      <p>{area?.data.name ?? venue.data.area} · {category?.data.name ?? venue.data.category}</p>
+      <h1>{venue.data.title}</h1>
+      <p class="hero-lead">{venue.data.shortDescription}</p>
+    </div>
+  </section>
+
+  <section class="venue-core-sticky reveal">
+    <div class="core-card">
+      <span>지역</span>
+      <strong>{area?.data.name ?? venue.data.area}</strong>
+    </div>
+    <div class="core-card">
+      <span>영업시간</span>
+      <strong>{venue.data.openingHours ?? '문의 시 안내'}</strong>
+    </div>
+    <div class="core-card">
+      <span>가격대</span>
+      <strong>{venue.data.priceRange ?? '문의 시 안내'}</strong>
+    </div>
+  </section>
+
+  <BannerSlot position="venue_top" />
+  <ContactInquiryBanner kakaoUrl={venue.data.kakaoUrl} lineUrl={venue.data.lineUrl} inquiryHref="#venue-inquiry" />
+
+  <section class="venue-grid">
+    <div class="venue-main">
+      <section class="section-block reveal">
+        <h2>이용 순서</h2>
+        <ol class="timeline">
+          {timelineSteps.map((step, index) => (
+            <li class="timeline-item">
+              <span class="timeline-index">{String(index + 1).padStart(2, '0')}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="section-block reveal">
+        <h2>갤러리</h2>
+        <div class="gallery-shell">
+          <button class="gallery-nav" data-gallery-prev type="button" aria-label="이전 이미지">‹</button>
+
+          <div class="gallery-track" data-gallery-track>
+            {galleryItems.map((item, index) => (
+              <button class="gallery-slide" data-gallery-slide type="button" data-lightbox-open={index}>
+                <img src={item.image} alt={item.alt} loading={index === 0 ? 'eager' : 'lazy'} width="1200" height="700" />
+              </button>
+            ))}
+          </div>
+
+          <button class="gallery-nav" data-gallery-next type="button" aria-label="다음 이미지">›</button>
+        </div>
+
+        <div class="gallery-dots">
+          {galleryItems.map((_, index) => (
+            <button type="button" class="gallery-dot" data-gallery-dot={index} aria-label={`이미지 ${index + 1}`}></button>
+          ))}
+        </div>
+      </section>
+
+      <section id="venue-inquiry" class="section-block reveal">
+        <h2>상세 안내</h2>
+        {venue.data.introBody && <p class="intro-body">{venue.data.introBody}</p>}
+        <p class="location-text">{venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.'}</p>
+        <article class="venue-body">
+          <Content />
+        </article>
+      </section>
+    </div>
+
+    <aside class="venue-aside reveal">
+      <h2>바로가기</h2>
+      <a href={`/${venue.data.area}/`}>지역 페이지 이동</a>
+      <a href={`/${venue.data.category}/`}>카테고리 페이지 이동</a>
+      <a href={`/${venue.data.area}/${venue.data.category}/`}>지역+카테고리 이동</a>
+    </aside>
+  </section>
+
+  <section class="section-block reveal">
+    <h2>관련 게시물</h2>
+    <div class="related-grid">
+      {related.map((item) => (
+        <a class="related-card reveal" href={`/venue/${item.slug}/`}>
+          <img src={item.data.thumbnail} alt={item.data.thumbnailAlt} loading="lazy" width="600" height="360" />
+          <div>
+            <h3>{item.data.title}</h3>
+            <p>{item.data.shortDescription}</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
   <BannerSlot position="venue_bottom" />
+
+  <script id="gallery-json" type="application/json" set:html={JSON.stringify(galleryItems)}></script>
+
+  <div class="lightbox" data-lightbox hidden>
+    <button class="lightbox-close" type="button" data-lightbox-close aria-label="닫기">✕</button>
+    <button class="lightbox-nav" type="button" data-lightbox-prev aria-label="이전">‹</button>
+    <figure>
+      <img data-lightbox-image src="" alt="" />
+      <figcaption data-lightbox-caption></figcaption>
+    </figure>
+    <button class="lightbox-nav" type="button" data-lightbox-next aria-label="다음">›</button>
+  </div>
+
+  <script type="module">
+    const track = document.querySelector('[data-gallery-track]');
+    const prevButton = document.querySelector('[data-gallery-prev]');
+    const nextButton = document.querySelector('[data-gallery-next]');
+    const dotButtons = Array.from(document.querySelectorAll('[data-gallery-dot]'));
+
+    const syncDots = () => {
+      if (!track || dotButtons.length === 0) return;
+      const index = Math.round(track.scrollLeft / Math.max(track.clientWidth, 1));
+      dotButtons.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
+    };
+
+    if (track) {
+      syncDots();
+      prevButton?.addEventListener('click', () => {
+        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+      });
+      nextButton?.addEventListener('click', () => {
+        track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
+      });
+      track.addEventListener('scroll', syncDots, { passive: true });
+      dotButtons.forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+          track.scrollTo({ left: i * track.clientWidth, behavior: 'smooth' });
+        });
+      });
+    }
+
+    const lightbox = document.querySelector('[data-lightbox]');
+    const lbImage = document.querySelector('[data-lightbox-image]');
+    const lbCaption = document.querySelector('[data-lightbox-caption]');
+    const openButtons = Array.from(document.querySelectorAll('[data-lightbox-open]'));
+    const closeButton = document.querySelector('[data-lightbox-close]');
+    const prevLightboxButton = document.querySelector('[data-lightbox-prev]');
+    const nextLightboxButton = document.querySelector('[data-lightbox-next]');
+    const galleryData = JSON.parse(document.querySelector('#gallery-json')?.textContent || '[]');
+
+    let activeIndex = 0;
+
+    const renderLightbox = () => {
+      if (!galleryData[activeIndex] || !lbImage || !lbCaption) return;
+      lbImage.src = galleryData[activeIndex].image;
+      lbImage.alt = galleryData[activeIndex].alt;
+      lbCaption.textContent = galleryData[activeIndex].alt;
+    };
+
+    const openLightbox = (index) => {
+      if (!lightbox) return;
+      activeIndex = index;
+      renderLightbox();
+      lightbox.hidden = false;
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeLightbox = () => {
+      if (!lightbox) return;
+      lightbox.hidden = true;
+      document.body.style.overflow = '';
+    };
+
+    openButtons.forEach((button, index) => {
+      button.addEventListener('click', () => openLightbox(index));
+    });
+
+    closeButton?.addEventListener('click', closeLightbox);
+    lightbox?.addEventListener('click', (event) => {
+      if (event.target === lightbox) closeLightbox();
+    });
+
+    prevLightboxButton?.addEventListener('click', () => {
+      activeIndex = (activeIndex - 1 + galleryData.length) % galleryData.length;
+      renderLightbox();
+    });
+
+    nextLightboxButton?.addEventListener('click', () => {
+      activeIndex = (activeIndex + 1) % galleryData.length;
+      renderLightbox();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (!lightbox || lightbox.hidden) return;
+      if (event.key === 'Escape') closeLightbox();
+      if (event.key === 'ArrowLeft') {
+        activeIndex = (activeIndex - 1 + galleryData.length) % galleryData.length;
+        renderLightbox();
+      }
+      if (event.key === 'ArrowRight') {
+        activeIndex = (activeIndex + 1) % galleryData.length;
+        renderLightbox();
+      }
+    });
+
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.16 }
+    );
+
+    reveals.forEach((element) => observer.observe(element));
+  </script>
 </BaseLayout>
+
+<style>
+  .venue-hero {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    min-height: 360px;
+    margin-bottom: 14px;
+  }
+
+  .venue-hero img {
+    width: 100%;
+    height: 360px;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.02);
+  }
+
+  .hero-overlay {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0.86) 80%);
+    color: #f8fafc;
+  }
+
+  .hero-overlay p {
+    margin: 0 0 8px;
+    font-size: 0.92rem;
+    opacity: 0.92;
+  }
+
+  .hero-overlay h1 {
+    margin: 0;
+    font-size: clamp(1.5rem, 3.4vw, 2.3rem);
+    line-height: 1.2;
+  }
+
+  .hero-lead {
+    margin-top: 10px;
+    font-size: 0.97rem;
+    line-height: 1.55;
+    max-width: 840px;
+  }
+
+  .venue-core-sticky {
+    position: sticky;
+    top: 12px;
+    z-index: 25;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(8px);
+  }
+
+  .core-card {
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid #dbe3f4;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .core-card span {
+    display: block;
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+
+  .core-card strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+  }
+
+  .venue-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 290px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .section-block {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+  }
+
+  .section-block h2 {
+    margin: 0 0 12px;
+    font-size: 1.2rem;
+  }
+
+  .timeline {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 12px;
+  }
+
+  .timeline-item {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+
+  .timeline-index {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.84rem;
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  .timeline-item h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .timeline-item p {
+    margin: 6px 0 0;
+    color: #334155;
+    line-height: 1.6;
+  }
+
+  .gallery-shell {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .gallery-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 10px;
+    scrollbar-width: none;
+  }
+
+  .gallery-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .gallery-slide {
+    border: 0;
+    padding: 0;
+    cursor: zoom-in;
+    border-radius: 14px;
+    overflow: hidden;
+    scroll-snap-align: start;
+    background: #0f172a;
+  }
+
+  .gallery-slide img {
+    width: 100%;
+    height: 340px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .gallery-nav {
+    height: 44px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 1.35rem;
+    cursor: pointer;
+  }
+
+  .gallery-dots {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .gallery-dot {
+    width: 8px;
+    height: 8px;
+    border: 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+    cursor: pointer;
+  }
+
+  .gallery-dot.is-active {
+    background: #0f172a;
+    transform: scale(1.2);
+  }
+
+  .intro-body,
+  .location-text {
+    color: #1f2937;
+    line-height: 1.75;
+  }
+
+  .venue-body :global(h2),
+  .venue-body :global(h3) {
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+  }
+
+  .venue-body :global(p),
+  .venue-body :global(li) {
+    line-height: 1.8;
+    color: #1f2937;
+  }
+
+  .venue-aside {
+    position: sticky;
+    top: 78px;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+
+  .venue-aside h2 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+  }
+
+  .venue-aside a {
+    display: block;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    text-decoration: none;
+  }
+
+  .venue-aside a:hover {
+    background: #f8fafc;
+  }
+
+  .related-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+
+  .related-card {
+    display: block;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .related-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .related-card div {
+    padding: 12px;
+  }
+
+  .related-card h3 {
+    margin: 0 0 8px;
+    font-size: 0.99rem;
+    line-height: 1.4;
+  }
+
+  .related-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #475569;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(2, 6, 23, 0.88);
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    gap: 12px;
+    align-items: center;
+    padding: 26px;
+  }
+
+  .lightbox figure {
+    margin: 0;
+  }
+
+  .lightbox img {
+    width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  .lightbox figcaption {
+    margin-top: 10px;
+    color: #e2e8f0;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  .lightbox-nav,
+  .lightbox-close {
+    border: 0;
+    color: #ffffff;
+    background: rgba(148, 163, 184, 0.28);
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    font-size: 1.35rem;
+    cursor: pointer;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 980px) {
+    .venue-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .venue-aside {
+      position: static;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .venue-hero img {
+      height: 290px;
+    }
+
+    .hero-overlay {
+      padding: 18px;
+    }
+
+    .venue-core-sticky {
+      grid-template-columns: 1fr;
+      top: 8px;
+    }
+
+    .section-block {
+      padding: 14px;
+    }
+
+    .gallery-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .gallery-nav {
+      display: none;
+    }
+
+    .gallery-slide img {
+      height: 250px;
+    }
+
+    .lightbox {
+      grid-template-columns: 1fr;
+      padding: 14px;
+    }
+
+    .lightbox-nav {
+      display: none;
+    }
+  }
+</style>

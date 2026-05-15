@@ -17,5 +17,6 @@ const jsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: '�
   <BannerSlot position="home_top" />
   <h2>주요 지역</h2><div class="grid">{areas.map((area) => <a class="card" href={`/${area.slug}/`}>{area.data.name}</a>)}</div>
   <h2>주요 카테고리</h2><div class="grid">{categories.map((c) => <a class="card" href={`/${c.slug}/`}>{c.data.name}</a>)}</div>
+  <BannerSlot position="home_middle" />
   <h2>추천 업체</h2><div class="grid">{venues.slice(0, 6).map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
 </BaseLayout>

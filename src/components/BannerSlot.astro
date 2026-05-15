@@ -15,7 +15,63 @@ const banners = (await getCollection('banners')).filter((b) => {
 }).sort((a, b) => a.data.order - b.data.order);
 ---
 {banners.map((banner) => (
-  <a href={banner.data.linkUrl} rel="sponsored nofollow" style="display:block;margin:16px 0;">
-    <img src={banner.data.image} alt={banner.data.imageAlt} width="1200" height="300" loading="lazy" />
+  <a class="banner-card" href={banner.data.linkUrl} rel="sponsored nofollow">
+    <img
+      src={banner.data.image}
+      alt={banner.data.imageAlt}
+      width="1200"
+      height="300"
+      loading={position === 'home_top' ? undefined : 'lazy'}
+    />
+    {(banner.data.description || banner.data.buttonText) && (
+      <div class="banner-overlay">
+        {banner.data.description && <p>{banner.data.description}</p>}
+        {banner.data.buttonText && <span>{banner.data.buttonText}</span>}
+      </div>
+    )}
   </a>
 ))}
+
+<style>
+  .banner-card {
+    position: relative;
+    display: block;
+    margin: 16px 0;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+  }
+
+  .banner-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .banner-overlay {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.75);
+    color: #ffffff;
+    backdrop-filter: blur(3px);
+  }
+
+  .banner-overlay p {
+    margin: 0 0 6px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .banner-overlay span {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: #06c755;
+    color: #ffffff;
+  }
+</style>

@@ -2,9 +2,10 @@
 interface Props {
   kakaoUrl?: string;
   lineUrl?: string;
+  inquiryHref?: string;
 }
 
-const { kakaoUrl, lineUrl } = Astro.props;
+const { kakaoUrl, lineUrl, inquiryHref = '#venue-inquiry' } = Astro.props;
 
 const channels = [
   { name: '카카오톡 문의', url: kakaoUrl, className: 'kakao' },
@@ -31,6 +32,23 @@ const channels = [
     )}
   </div>
 </section>
+
+<nav class="mobile-quick-cta" aria-label="모바일 문의 바로가기">
+  {kakaoUrl ? (
+    <a class="mobile-cta kakao" href={kakaoUrl} target="_blank" rel="nofollow noopener noreferrer">카톡 문의</a>
+  ) : (
+    <button class="mobile-cta kakao" type="button" disabled>카톡 준비중</button>
+  )}
+
+  {lineUrl ? (
+    <a class="mobile-cta line" href={lineUrl} target="_blank" rel="nofollow noopener noreferrer">라인 문의</a>
+  ) : (
+    <button class="mobile-cta line" type="button" disabled>라인 준비중</button>
+  )}
+
+  <a class="mobile-cta inquiry" href={inquiryHref}>문의 안내</a>
+</nav>
+<div class="mobile-quick-cta-spacer" />
 
 <style>
   .contact-banner {
@@ -103,9 +121,61 @@ const channels = [
     color: #ffffff;
   }
 
+  .mobile-quick-cta {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 60;
+    display: none;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(6px);
+  }
+
+  .mobile-cta {
+    flex: 1;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 44px;
+    border: 0;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .mobile-cta.inquiry {
+    background: #f8fafc;
+    color: #0f172a;
+  }
+
+  .mobile-cta:disabled {
+    opacity: 0.72;
+    cursor: not-allowed;
+  }
+
+  .mobile-quick-cta-spacer {
+    display: none;
+    height: 74px;
+  }
+
   @media (max-width: 720px) {
     .contact-banner-grid {
       grid-template-columns: 1fr;
+    }
+
+    .mobile-quick-cta {
+      display: flex;
+    }
+
+    .mobile-quick-cta-spacer {
+      display: block;
     }
   }
 </style>
