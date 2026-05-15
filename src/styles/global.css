@@ -12,6 +12,9 @@
   --accent-pink: #ff34ae;
   --accent-cyan: #22f4ff;
   --accent-yellow: #ffe84a;
+  --site-menu-tabs-top: 8px;
+  --site-menu-tabs-height: 96px;
+  --site-menu-stack-gap: 8px;
 }
 
 * {

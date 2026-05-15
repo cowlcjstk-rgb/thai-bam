@@ -1,4 +1,4 @@
-backend:
+﻿backend:
   name: github
   repo: cowlcjstk-rgb/thai-bam
   branch: main
@@ -30,9 +30,9 @@ collections:
     create: false
     delete: false
     slug: "{{slug}}"
-    summary: "홈 히어로 문구"
+    summary: "메인 히어로 문구"
     fields:
-      - { label: 상단 키커 문구, name: heroKicker, widget: string }
+      - { label: 상단 라벨 문구, name: heroKicker, widget: string }
       - { label: 메인 제목, name: heroTitle, widget: string }
       - { label: 소개 문구, name: heroDescription, widget: text }
 
@@ -64,7 +64,7 @@ collections:
           - { label: "VIP Guide", value: vip-guide }
 
       - { label: 요약 소개, name: shortDescription, widget: text, hint: "40~180자 권장" }
-      - { label: 상단 본문 소개, name: introBody, widget: text, required: false, hint: "상세 페이지 상단에 노출되는 SEO 본문" }
+      - { label: 상단 본문 소개, name: introBody, widget: text, required: false, hint: "상세 페이지 상단에 출력되는 SEO 본문" }
 
       - label: 이용 순서 타임라인
         name: usageSteps
@@ -79,7 +79,7 @@ collections:
       - { label: SEO 설명, name: seoDescription, widget: text }
 
       - { label: 대표 이미지, name: thumbnail, widget: image }
-      - { label: 대표 이미지 ALT, name: thumbnailAlt, widget: string }
+      - { label: 대표 이미지 ALT, name: thumbnailAlt, widget: string, hint: "이미지에 무엇이 보이는지 자연스럽게 설명해 주세요. 예: 방콕 KTV Sample 메인 라운지 전경" }
       - label: 대표 이미지 정렬
         name: thumbnailPosition
         widget: select
@@ -95,12 +95,12 @@ collections:
         required: false
         fields:
           - { label: 이미지, name: image, widget: image }
-          - { label: 이미지 ALT, name: alt, widget: string }
+          - { label: 이미지 ALT, name: alt, widget: string, hint: "사진 장면을 구체적으로 작성해 주세요. 예: 파타야 스파 내부 테라피 룸" }
 
       - { label: 영업시간, name: openingHours, widget: string, required: false }
-      - { label: 가격대, name: priceRange, widget: string, required: false }
+      - { label: 가격대, name: priceRange, widget: text, required: false, hint: "여러 줄 입력 가능\n예시:\n1번 옵션은 1000바트\n2번 옵션은 2000바트\n3번 옵션은 3000바트" }
       - { label: 위치 설명, name: addressText, widget: string, required: false }
-      - { label: 구글맵 링크, name: googleMapUrl, widget: string, required: false, hint: "Google Maps 공유 링크를 붙여넣으세요." }
+      - { label: 구글맵 링크, name: googleMapUrl, widget: string, required: false, hint: "공유 링크 붙여넣기 가능 (예: https://maps.app.goo.gl/....)" }
 
       - { label: 카카오 문의 링크, name: kakaoUrl, widget: string, required: false }
       - { label: 라인 문의 링크, name: lineUrl, widget: string, required: false }
@@ -124,7 +124,7 @@ collections:
         name: position
         widget: select
         options:
-          - { label: 메인 히어로 (모바일 첫 화면), value: home_hero }
+          - { label: 메인 히어로(모바일 첫 화면), value: home_hero }
           - { label: 메인 상단, value: home_top }
           - { label: 메인 중간, value: home_middle }
           - { label: 지역 페이지 상단, value: area_top }
@@ -133,7 +133,7 @@ collections:
           - { label: 업체 상세 하단, value: venue_bottom }
 
       - { label: 배너 이미지, name: image, widget: image }
-      - { label: 이미지 ALT, name: imageAlt, widget: string }
+      - { label: 이미지 ALT, name: imageAlt, widget: string, hint: "배너에서 보여주는 핵심 내용을 설명해 주세요. 예: 메인 상단 프로모션 배너 이미지" }
       - { label: 배너 설명, name: description, widget: string, required: false }
       - { label: 버튼 문구, name: buttonText, widget: string, required: false }
       - { label: 클릭 링크, name: linkUrl, widget: string, required: false, default: "#" }

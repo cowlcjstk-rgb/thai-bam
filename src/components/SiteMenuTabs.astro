@@ -21,7 +21,7 @@ const isPrefixActive = (href) => pathname.startsWith(normalizePath(href));
 const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
 ---
 
-<nav class="site-menu-tabs" aria-label="사이트 메뉴">
+<nav class="site-menu-tabs" data-site-menu-tabs aria-label="사이트 메뉴">
   <div class="menu-group">
     <a class:list={{ active: isExactActive('/') }} href="/">홈</a>
     {areas.map((area) => (
@@ -36,10 +36,30 @@ const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
   </div>
 </nav>
 
+<script type="module">
+  const menuTabs = document.querySelector('[data-site-menu-tabs]');
+  const root = document.documentElement;
+
+  if (menuTabs) {
+    const updateMenuTabHeight = () => {
+      const height = Math.ceil(menuTabs.getBoundingClientRect().height);
+      root.style.setProperty('--site-menu-tabs-height', `${height}px`);
+    };
+
+    updateMenuTabHeight();
+    window.addEventListener('resize', updateMenuTabHeight, { passive: true });
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateMenuTabHeight);
+      observer.observe(menuTabs);
+    }
+  }
+</script>
+
 <style>
   .site-menu-tabs {
     position: sticky;
-    top: 8px;
+    top: var(--site-menu-tabs-top, 8px);
     z-index: 40;
     margin-bottom: 14px;
     padding: 10px;

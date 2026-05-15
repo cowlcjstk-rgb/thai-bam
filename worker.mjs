@@ -1,9 +1,11 @@
-const STATE_COOKIE = "decap_oauth_state";
+﻿const STATE_COOKIE = "decap_oauth_state";
 const STATE_MAX_AGE = 600;
 const ADMIN_DEFAULT_ID = "admin";
 const ADMIN_DEFAULT_PASSWORD = "1q2w3e4r!Q";
 const ADMIN_SESSION_COOKIE = "thai_bam_admin_session";
 const ADMIN_SESSION_TTL = 60 * 60 * 12;
+const ADMIN_ENTRY_QUERY_KEY = "admin_auth";
+const ADMIN_ENTRY_QUERY_VALUE = "1";
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -124,6 +126,10 @@ function sanitizeNextPath(value) {
   return "/admin/";
 }
 
+function isAdminEntryPath(pathname) {
+  return pathname === "/admin" || pathname === "/admin/" || pathname === "/admin/index.html";
+}
+
 function isProtectedPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/oauth" || pathname.startsWith("/oauth/");
 }
@@ -143,7 +149,7 @@ function loginPage(url, errorMessage = "") {
     </style>
     <div class="wrap">
       <h1>관리자 로그인</h1>
-      <p>관리자 페이지 접근을 위해 아이디와 비밀번호를 입력해 주세요.</p>
+      <p>관리자 페이지 접근 전, 아이디와 비밀번호를 입력해 주세요.</p>
       ${errorMessage ? `<div class="err">${errorMessage}</div>` : ""}
       <form method="post" action="/admin-login?next=${encodeURIComponent(nextPath)}">
         <label for="admin-id">ID</label>
@@ -185,17 +191,22 @@ export default {
         if (id === valid.id && password === valid.password) {
           const token = await createAdminSessionToken(env);
           const nextPath = sanitizeNextPath(url.searchParams.get("next"));
+          const nextUrl = new URL(nextPath, url.origin);
+          if (isAdminEntryPath(nextUrl.pathname)) {
+            nextUrl.searchParams.set(ADMIN_ENTRY_QUERY_KEY, ADMIN_ENTRY_QUERY_VALUE);
+          }
+          const location = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
           return new Response(null, {
             status: 302,
             headers: {
-              location: nextPath,
+              location,
               "set-cookie": `${ADMIN_SESSION_COOKIE}=${token}; Path=/; Max-Age=${ADMIN_SESSION_TTL}; HttpOnly; Secure; SameSite=Lax`,
               "cache-control": "no-store",
             },
           });
         }
 
-        return loginPage(url, "아이디 또는 비밀번호가 올바르지 않습니다.");
+        return loginPage(url, "?꾩씠???먮뒗 鍮꾨?踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.");
       }
 
       return new Response("Method Not Allowed", { status: 405 });
@@ -215,6 +226,10 @@ export default {
     if (isProtectedPath(url.pathname)) {
       const sessionValid = await isAdminSessionValid(request, env);
       if (!sessionValid) {
+        return redirectToLogin(url);
+      }
+
+      if (isAdminEntryPath(url.pathname) && url.searchParams.get(ADMIN_ENTRY_QUERY_KEY) !== ADMIN_ENTRY_QUERY_VALUE) {
         return redirectToLogin(url);
       }
     }
@@ -291,7 +306,7 @@ export default {
         .filter(Boolean);
 
       if (!scopes.includes("repo")) {
-        return oauthError("GitHub OAuth App(repo scope)로 로그인해 주세요. GitHub App 토큰으로는 저장 권한이 부족할 수 있습니다.");
+        return oauthError("Please login via GitHub OAuth App with repo scope. GitHub App token may not have write permission.");
       }
 
       const content = {

@@ -39,37 +39,92 @@ const getThumbPosition = (position) => {
   return 'center center';
 };
 const heroImagePosition = getThumbPosition(venue.data.thumbnailPosition);
+const priceText = venue.data.priceRange?.trim() ?? '';
+const normalizedPriceText = priceText.replace(/\\n/g, '\n');
+const priceSummary = normalizedPriceText ? normalizedPriceText.split(/\r?\n/)[0] : '문의 후 안내';
 
-const getMapEmbedUrl = (mapUrl, latitude, longitude) => {
-  if (typeof latitude === 'number' && typeof longitude === 'number') {
-    return `https://www.google.com/maps?q=${latitude},${longitude}&output=embed`;
-  }
+const extractCoords = (raw) => {
+  if (!raw) return undefined;
 
-  if (!mapUrl) return undefined;
+  const atMatch = raw.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  if (atMatch) return { lat: Number(atMatch[1]), lng: Number(atMatch[2]) };
 
-  try {
-    const parsed = new URL(mapUrl);
-    if (parsed.hostname.includes('google.') && parsed.pathname.includes('/maps/embed')) {
-      return parsed.toString();
-    }
+  const markerMatch = raw.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  if (markerMatch) return { lat: Number(markerMatch[1]), lng: Number(markerMatch[2]) };
 
-    const query = parsed.searchParams.get('q') ?? parsed.searchParams.get('query');
-    if (query) {
-      return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
-    }
-  } catch {
-    return `https://www.google.com/maps?q=${encodeURIComponent(mapUrl)}&output=embed`;
-  }
+  const pairMatch = raw.match(/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  if (pairMatch) return { lat: Number(pairMatch[1]), lng: Number(pairMatch[2]) };
 
-  return `https://www.google.com/maps?q=${encodeURIComponent(mapUrl)}&output=embed`;
+  return undefined;
 };
 
-const mapExternalUrl = venue.data.googleMapUrl
-  ? venue.data.googleMapUrl
-  : typeof venue.data.latitude === 'number' && typeof venue.data.longitude === 'number'
-    ? `https://maps.google.com/?q=${venue.data.latitude},${venue.data.longitude}`
-    : undefined;
-const mapEmbedUrl = getMapEmbedUrl(mapExternalUrl, venue.data.latitude, venue.data.longitude);
+const isFiniteCoord = (value) => Number.isFinite(value) && Math.abs(value) <= 180;
+const toMapEmbedByCoords = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+
+const resolveMapData = async (mapUrl, latitude, longitude) => {
+  if (typeof latitude === 'number' && typeof longitude === 'number') {
+    return {
+      externalUrl: mapUrl || `https://maps.google.com/?q=${latitude},${longitude}`,
+      embedUrl: toMapEmbedByCoords(latitude, longitude),
+    };
+  }
+
+  const originalUrl = mapUrl?.trim();
+  if (!originalUrl) return { externalUrl: undefined, embedUrl: undefined };
+
+  let resolvedUrl = originalUrl;
+
+  try {
+    const parsed = new URL(originalUrl);
+    const isShortMapUrl =
+      parsed.hostname === 'maps.app.goo.gl' ||
+      parsed.hostname === 'goo.gl' ||
+      parsed.hostname.endsWith('.goo.gl');
+
+    if (isShortMapUrl) {
+      const response = await fetch(originalUrl, { method: 'GET', redirect: 'follow' });
+      if (response?.url) resolvedUrl = response.url;
+    }
+
+    if (parsed.hostname.includes('google.') && parsed.pathname.includes('/maps/embed')) {
+      return { externalUrl: originalUrl, embedUrl: originalUrl };
+    }
+  } catch {
+    // no-op
+  }
+
+  const coords = extractCoords(resolvedUrl) ?? extractCoords(originalUrl);
+  if (coords && isFiniteCoord(coords.lat) && isFiniteCoord(coords.lng)) {
+    return {
+      externalUrl: originalUrl,
+      embedUrl: toMapEmbedByCoords(coords.lat, coords.lng),
+    };
+  }
+
+  try {
+    const parsed = new URL(resolvedUrl);
+    const query = parsed.searchParams.get('q') ?? parsed.searchParams.get('query');
+    if (query) {
+      return {
+        externalUrl: originalUrl,
+        embedUrl: `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`,
+      };
+    }
+  } catch {
+    // no-op
+  }
+
+  return {
+    externalUrl: originalUrl,
+    embedUrl: `https://www.google.com/maps?q=${encodeURIComponent(resolvedUrl)}&output=embed`,
+  };
+};
+
+const { externalUrl: mapExternalUrl, embedUrl: mapEmbedUrl } = await resolveMapData(
+  venue.data.googleMapUrl,
+  venue.data.latitude,
+  venue.data.longitude
+);
 
 const dedupe = new Set();
 const galleryItems = [
@@ -111,7 +166,7 @@ const jsonLd = {
     </div>
   </section>
 
-  <section class="venue-core-sticky reveal">
+  <section class="venue-core-sticky reveal" data-core-sticky>
     <div class="core-card">
       <span>지역</span>
       <strong>{area?.data.name ?? venue.data.area}</strong>
@@ -122,7 +177,7 @@ const jsonLd = {
     </div>
     <div class="core-card">
       <span>가격대</span>
-      <strong>{venue.data.priceRange ?? '문의 시 안내'}</strong>
+      <strong>{priceSummary}</strong>
     </div>
   </section>
 
@@ -163,6 +218,12 @@ const jsonLd = {
       <section id="venue-inquiry" class="section-block reveal">
         <h2>상세 안내</h2>
         {venue.data.introBody && <p class="intro-body">{venue.data.introBody}</p>}
+        {normalizedPriceText && (
+          <div class="price-box">
+            <h3>가격대 안내</h3>
+            <p>{normalizedPriceText}</p>
+          </div>
+        )}
         <p class="location-text">{venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.'}</p>
         {mapEmbedUrl && (
           <div class="map-embed">
@@ -334,6 +395,29 @@ const jsonLd = {
       }
     });
 
+    const coreSticky = document.querySelector('[data-core-sticky]');
+    const compactMedia = window.matchMedia('(max-width: 720px)');
+
+    const updateCoreStickyCompact = () => {
+      if (!coreSticky) return;
+      if (!compactMedia.matches) {
+        coreSticky.classList.remove('is-compact');
+        return;
+      }
+
+      const topOffset = Number.parseFloat(getComputedStyle(coreSticky).top || '0') || 0;
+      const rect = coreSticky.getBoundingClientRect();
+      const isStuck = rect.top <= topOffset + 1;
+      const shouldCompact = isStuck && window.scrollY > 30;
+      coreSticky.classList.toggle('is-compact', shouldCompact);
+    };
+
+    updateCoreStickyCompact();
+    window.addEventListener('scroll', updateCoreStickyCompact, { passive: true });
+    window.addEventListener('resize', updateCoreStickyCompact, { passive: true });
+    compactMedia.addEventListener?.('change', updateCoreStickyCompact);
+    compactMedia.addListener?.(updateCoreStickyCompact);
+
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver(
       (entries) => {
@@ -397,13 +481,14 @@ const jsonLd = {
 
   .venue-core-sticky {
     position: sticky;
-    top: 12px;
+    top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + var(--site-menu-stack-gap, 8px));
     z-index: 25;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 16px;
     backdrop-filter: blur(8px);
+    transition: gap 0.2s ease, transform 0.2s ease;
   }
 
   .core-card {
@@ -411,6 +496,7 @@ const jsonLd = {
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(10, 12, 18, 0.86);
+    transition: padding 0.2s ease, border-radius 0.2s ease, opacity 0.2s ease;
   }
 
   .core-card span {
@@ -418,11 +504,13 @@ const jsonLd = {
     font-size: 0.78rem;
     color: #9ca8c2;
     margin-bottom: 4px;
+    transition: opacity 0.18s ease, max-height 0.18s ease, margin-bottom 0.18s ease;
   }
 
   .core-card strong {
     font-size: 0.95rem;
     color: #f6f9ff;
+    transition: font-size 0.18s ease;
   }
 
   .venue-grid {
@@ -561,6 +649,27 @@ const jsonLd = {
   .location-text {
     color: #d7deef;
     line-height: 1.75;
+  }
+
+  .price-box {
+    margin: 12px 0 14px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .price-box h3 {
+    margin: 0 0 8px;
+    font-size: 0.98rem;
+    color: #f7f9ff;
+  }
+
+  .price-box p {
+    margin: 0;
+    white-space: pre-line;
+    color: #d7deef;
+    line-height: 1.7;
   }
 
   .map-embed {
@@ -722,7 +831,33 @@ const jsonLd = {
 
     .venue-core-sticky {
       grid-template-columns: 1fr;
-      top: 8px;
+      top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 6px);
+      gap: 8px;
+    }
+
+    .venue-core-sticky.is-compact {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .venue-core-sticky.is-compact .core-card {
+      padding: 8px 8px;
+      border-radius: 10px;
+    }
+
+    .venue-core-sticky.is-compact .core-card span {
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      overflow: hidden;
+    }
+
+    .venue-core-sticky.is-compact .core-card strong {
+      display: block;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .section-block {
