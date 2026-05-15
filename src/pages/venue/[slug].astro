@@ -127,25 +127,9 @@ const jsonLd = {
   </section>
 
   <BannerSlot position="venue_top" />
-  <ContactInquiryBanner kakaoUrl={venue.data.kakaoUrl} lineUrl={venue.data.lineUrl} inquiryHref="#venue-inquiry" />
 
   <section class="venue-grid">
     <div class="venue-main">
-      <section class="section-block reveal">
-        <h2>이용 순서</h2>
-        <ol class="timeline">
-          {timelineSteps.map((step, index) => (
-            <li class="timeline-item">
-              <span class="timeline-index">{String(index + 1).padStart(2, '0')}</span>
-              <div>
-                <h3>{step.title}</h3>
-                <p>{step.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
       <section class="section-block reveal">
         <h2>갤러리</h2>
         <div class="gallery-shell">
@@ -191,21 +175,33 @@ const jsonLd = {
             ></iframe>
           </div>
         )}
+        {mapExternalUrl && (
+          <p class="map-link-wrap">
+            <a class="map-link" href={mapExternalUrl} target="_blank" rel="noopener noreferrer nofollow">구글맵 위치 보기</a>
+          </p>
+        )}
         <article class="venue-body">
           <Content />
         </article>
       </section>
-    </div>
 
-    <aside class="venue-aside reveal">
-      <h2>바로가기</h2>
-      <a href={`/${venue.data.area}/`}>지역 페이지 이동</a>
-      <a href={`/${venue.data.category}/`}>카테고리 페이지 이동</a>
-      <a href={`/${venue.data.area}/${venue.data.category}/`}>지역+카테고리 이동</a>
-      {mapExternalUrl && (
-        <a href={mapExternalUrl} target="_blank" rel="noopener noreferrer nofollow">구글맵 위치 보기</a>
-      )}
-    </aside>
+      <section class="section-block reveal">
+        <h2>이용 순서</h2>
+        <ol class="timeline">
+          {timelineSteps.map((step, index) => (
+            <li class="timeline-item">
+              <span class="timeline-index">{String(index + 1).padStart(2, '0')}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <ContactInquiryBanner kakaoUrl={venue.data.kakaoUrl} lineUrl={venue.data.lineUrl} inquiryHref="#venue-inquiry" />
+    </div>
   </section>
 
   <section class="section-block reveal">
@@ -430,10 +426,12 @@ const jsonLd = {
   }
 
   .venue-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 290px;
-    gap: 16px;
-    align-items: start;
+    display: block;
+  }
+
+  .venue-main {
+    max-width: 920px;
+    margin: 0 auto;
   }
 
   .section-block {
@@ -580,6 +578,24 @@ const jsonLd = {
     border: 0;
   }
 
+  .map-link-wrap {
+    margin: 10px 0 0;
+  }
+
+  .map-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(34, 244, 255, 0.12);
+    color: #dfffff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
   .venue-body :global(h2),
   .venue-body :global(h3) {
     margin-top: 1.2em;
@@ -590,38 +606,6 @@ const jsonLd = {
   .venue-body :global(li) {
     line-height: 1.8;
     color: #d7deef;
-  }
-
-  .venue-aside {
-    position: sticky;
-    top: 78px;
-    padding: 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(8, 10, 14, 0.92);
-    display: grid;
-    gap: 8px;
-    align-content: start;
-  }
-
-  .venue-aside h2 {
-    margin: 0 0 4px;
-    font-size: 1.05rem;
-    color: #ffe84a;
-  }
-
-  .venue-aside a {
-    display: block;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: #e7edf8;
-    text-decoration: none;
-    background: rgba(255, 255, 255, 0.02);
-  }
-
-  .venue-aside a:hover {
-    background: rgba(0, 255, 238, 0.08);
   }
 
   .related-grid {
@@ -725,16 +709,6 @@ const jsonLd = {
   .reveal.in-view {
     opacity: 1;
     transform: translateY(0);
-  }
-
-  @media (max-width: 980px) {
-    .venue-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .venue-aside {
-      position: static;
-    }
   }
 
   @media (max-width: 720px) {

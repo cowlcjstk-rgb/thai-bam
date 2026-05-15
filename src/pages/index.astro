@@ -17,6 +17,8 @@ const defaultHero = {
 };
 
 const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?? homeEntries[0]?.data ?? defaultHero;
+const POST_INITIAL_COUNT = 5;
+const POST_BATCH_SIZE = 5;
 
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
 const featuredVenues = venues.filter((v) => v.data.featured).slice(0, 4);
@@ -114,8 +116,8 @@ const getThumbPosition = (position) => {
       </div>
 
       <div class="post-grid">
-        {latestVenues.slice(0, 8).map((venue) => (
-          <article class="post-card reveal">
+        {latestVenues.map((venue, index) => (
+          <article class="post-card" data-post-item hidden={index >= POST_INITIAL_COUNT}>
             <a href={`/venue/${venue.slug}/`}>
               <img
                 src={venue.data.thumbnail}
@@ -136,6 +138,12 @@ const getThumbPosition = (position) => {
           </article>
         ))}
       </div>
+
+      {latestVenues.length > POST_INITIAL_COUNT && (
+        <div class="post-more-wrap">
+          <button type="button" class="post-more-button" data-post-more data-batch-size={POST_BATCH_SIZE}>더보기</button>
+        </div>
+      )}
     </section>
 
     <section class="quick-links reveal">
@@ -218,6 +226,32 @@ const getThumbPosition = (position) => {
   </div>
 
   <script type="module">
+    const postItems = Array.from(document.querySelectorAll('[data-post-item]'));
+    const postMoreButton = document.querySelector('[data-post-more]');
+    const postBatchSize = Number(postMoreButton?.getAttribute('data-batch-size') || 5);
+    let visiblePostCount = Math.min(5, postItems.length);
+
+    const updatePosts = () => {
+      postItems.forEach((item, index) => {
+        item.hidden = index >= visiblePostCount;
+      });
+
+      if (!postMoreButton) return;
+      const remaining = Math.max(postItems.length - visiblePostCount, 0);
+      if (remaining <= 0) {
+        postMoreButton.hidden = true;
+        return;
+      }
+      postMoreButton.hidden = false;
+      postMoreButton.textContent = `더보기 (${Math.min(postBatchSize, remaining)}개)`;
+    };
+
+    updatePosts();
+    postMoreButton?.addEventListener('click', () => {
+      visiblePostCount = Math.min(visiblePostCount + postBatchSize, postItems.length);
+      updatePosts();
+    });
+
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver(
       (entries) => {
@@ -426,6 +460,23 @@ const getThumbPosition = (position) => {
     display: grid;
     gap: 12px;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+
+  .post-more-wrap {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .post-more-button {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.07);
+    color: #f5f8ff;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .post-card {

@@ -2,6 +2,8 @@ const STATE_COOKIE = "decap_oauth_state";
 const STATE_MAX_AGE = 600;
 const ADMIN_DEFAULT_ID = "admin";
 const ADMIN_DEFAULT_PASSWORD = "1q2w3e4r!Q";
+const ADMIN_SESSION_COOKIE = "thai_bam_admin_session";
+const ADMIN_SESSION_TTL = 60 * 60 * 12;
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -42,46 +44,178 @@ function oauthError(message) {
   );
 }
 
-function unauthorizedResponse() {
-  return new Response("Authentication required.", {
-    status: 401,
-    headers: {
-      "www-authenticate": 'Basic realm="Thai Bam Admin", charset="UTF-8"',
-      "cache-control": "no-store",
-    },
-  });
+function getAdminCredentials(env) {
+  return {
+    id: env.ADMIN_LOGIN_ID || ADMIN_DEFAULT_ID,
+    password: env.ADMIN_LOGIN_PASSWORD || ADMIN_DEFAULT_PASSWORD,
+  };
 }
 
-function isAdminAuthorized(request, env) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization || !authorization.startsWith("Basic ")) return false;
+function getAdminSessionSecret(env) {
+  return env.ADMIN_SESSION_SECRET || `${getAdminCredentials(env).id}:${getAdminCredentials(env).password}:thai-bam-admin`;
+}
 
-  let decoded = "";
+function toBase64UrlFromBytes(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64UrlToBytes(value) {
+  let base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  while (base64.length % 4 !== 0) base64 += "=";
+  const binary = atob(base64);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
+  return out;
+}
+
+function toBase64UrlFromText(value) {
+  return toBase64UrlFromBytes(new TextEncoder().encode(value));
+}
+
+function fromBase64UrlToText(value) {
+  return new TextDecoder().decode(fromBase64UrlToBytes(value));
+}
+
+async function signString(value, secret) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
+  return toBase64UrlFromBytes(new Uint8Array(signature));
+}
+
+async function createAdminSessionToken(env) {
+  const payload = {
+    exp: Math.floor(Date.now() / 1000) + ADMIN_SESSION_TTL,
+  };
+  const encodedPayload = toBase64UrlFromText(JSON.stringify(payload));
+  const signature = await signString(encodedPayload, getAdminSessionSecret(env));
+  return `${encodedPayload}.${signature}`;
+}
+
+async function isAdminSessionValid(request, env) {
+  const sessionToken = parseCookie(request.headers.get("cookie"))[ADMIN_SESSION_COOKIE];
+  if (!sessionToken) return false;
+
+  const [encodedPayload, signature] = sessionToken.split(".");
+  if (!encodedPayload || !signature) return false;
+
+  const expected = await signString(encodedPayload, getAdminSessionSecret(env));
+  if (signature !== expected) return false;
+
   try {
-    decoded = atob(authorization.slice(6).trim());
+    const payload = JSON.parse(fromBase64UrlToText(encodedPayload));
+    if (!payload?.exp || Number(payload.exp) < Math.floor(Date.now() / 1000)) return false;
+    return true;
   } catch {
     return false;
   }
+}
 
-  const separatorIndex = decoded.indexOf(":");
-  if (separatorIndex < 0) return false;
+function sanitizeNextPath(value) {
+  if (!value) return "/admin/";
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  return "/admin/";
+}
 
-  const username = decoded.slice(0, separatorIndex);
-  const password = decoded.slice(separatorIndex + 1);
+function isProtectedPath(pathname) {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/oauth" || pathname.startsWith("/oauth/");
+}
 
-  const validId = env.ADMIN_LOGIN_ID || ADMIN_DEFAULT_ID;
-  const validPassword = env.ADMIN_LOGIN_PASSWORD || ADMIN_DEFAULT_PASSWORD;
+function loginPage(url, errorMessage = "") {
+  const nextPath = sanitizeNextPath(url.searchParams.get("next"));
+  return html(
+    `<style>
+      body{margin:0;min-height:100vh;display:grid;place-items:center;background:#07090f;color:#f5f7ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+      .wrap{width:min(420px,92vw);padding:26px;border:1px solid #2a3145;border-radius:14px;background:#101522}
+      h1{margin:0 0 10px;font-size:1.25rem}
+      p{margin:0 0 16px;color:#b8c2d9;line-height:1.5}
+      label{display:block;margin:0 0 6px;font-size:.9rem;color:#dbe4f8}
+      input{width:100%;min-height:42px;border:1px solid #33425e;border-radius:10px;background:#0c1120;color:#f5f7ff;padding:0 12px;margin:0 0 12px}
+      button{width:100%;min-height:44px;border:0;border-radius:10px;background:#ff34ae;color:#fff;font-weight:700;cursor:pointer}
+      .err{margin:0 0 12px;padding:9px 10px;border:1px solid #8d2b4d;border-radius:10px;background:#3a1120;color:#ffd5e3}
+    </style>
+    <div class="wrap">
+      <h1>관리자 로그인</h1>
+      <p>관리자 페이지 접근을 위해 아이디와 비밀번호를 입력해 주세요.</p>
+      ${errorMessage ? `<div class="err">${errorMessage}</div>` : ""}
+      <form method="post" action="/admin-login?next=${encodeURIComponent(nextPath)}">
+        <label for="admin-id">ID</label>
+        <input id="admin-id" name="id" autocomplete="username" required />
+        <label for="admin-password">Password</label>
+        <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
+        <button type="submit">로그인</button>
+      </form>
+    </div>`
+  );
+}
 
-  return username === validId && password === validPassword;
+function redirectToLogin(url) {
+  const next = sanitizeNextPath(`${url.pathname}${url.search}`);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location: `/admin-login?next=${encodeURIComponent(next)}`,
+      "cache-control": "no-store",
+    },
+  });
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
-      if (!isAdminAuthorized(request, env)) {
-        return unauthorizedResponse();
+    if (url.pathname === "/admin-login") {
+      if (request.method === "GET") {
+        return loginPage(url);
+      }
+
+      if (request.method === "POST") {
+        const formData = await request.formData().catch(() => null);
+        const id = String(formData?.get("id") || "");
+        const password = String(formData?.get("password") || "");
+        const valid = getAdminCredentials(env);
+
+        if (id === valid.id && password === valid.password) {
+          const token = await createAdminSessionToken(env);
+          const nextPath = sanitizeNextPath(url.searchParams.get("next"));
+          return new Response(null, {
+            status: 302,
+            headers: {
+              location: nextPath,
+              "set-cookie": `${ADMIN_SESSION_COOKIE}=${token}; Path=/; Max-Age=${ADMIN_SESSION_TTL}; HttpOnly; Secure; SameSite=Lax`,
+              "cache-control": "no-store",
+            },
+          });
+        }
+
+        return loginPage(url, "아이디 또는 비밀번호가 올바르지 않습니다.");
+      }
+
+      return new Response("Method Not Allowed", { status: 405 });
+    }
+
+    if (url.pathname === "/admin-logout") {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          location: "/admin-login",
+          "set-cookie": `${ADMIN_SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (isProtectedPath(url.pathname)) {
+      const sessionValid = await isAdminSessionValid(request, env);
+      if (!sessionValid) {
+        return redirectToLogin(url);
       }
     }
 
