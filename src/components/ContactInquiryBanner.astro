@@ -1,4 +1,4 @@
----
+﻿---
 interface Props {
   kakaoUrl?: string;
   lineUrl?: string;
@@ -15,7 +15,7 @@ const channels = [
 
 <section class="contact-banner" aria-label="문의 배너">
   <p class="contact-banner-title">빠른 문의</p>
-  <p class="contact-banner-subtitle">카카오톡 / 라인 링크는 곧 추가됩니다.</p>
+  <p class="contact-banner-subtitle">카카오톡 / 라인 링크는 운영 준비 후 연결됩니다.</p>
 
   <div class="contact-banner-grid">
     {channels.map((channel) =>
@@ -55,21 +55,21 @@ const channels = [
     margin: 20px 0;
     padding: 18px;
     border-radius: 16px;
-    border: 1px solid #d6e4ff;
-    background: linear-gradient(140deg, #eff6ff 0%, #f8fafc 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(150deg, rgba(9, 12, 20, 0.94) 0%, rgba(14, 17, 24, 0.95) 100%);
   }
 
   .contact-banner-title {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    color: #0f172a;
+    color: #ffe84a;
   }
 
   .contact-banner-subtitle {
     margin: 6px 0 14px;
     font-size: 0.93rem;
-    color: #475569;
+    color: #b7c1d8;
   }
 
   .contact-banner-grid {
@@ -103,12 +103,12 @@ const channels = [
 
   .contact-button:disabled {
     cursor: not-allowed;
-    opacity: 0.95;
+    opacity: 0.92;
   }
 
   .contact-button:not(:disabled):hover {
     transform: translateY(-2px);
-    filter: brightness(1.02);
+    filter: brightness(1.03);
   }
 
   .kakao {
@@ -131,8 +131,9 @@ const channels = [
     gap: 8px;
     padding: 8px;
     border-radius: 14px;
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(6px);
+    background: rgba(8, 10, 16, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(8px);
   }
 
   .mobile-cta {

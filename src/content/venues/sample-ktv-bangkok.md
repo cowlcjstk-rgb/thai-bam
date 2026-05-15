@@ -9,6 +9,7 @@ seoTitle: "Sample KTV Bangkok | 방콕 KTV 정보"
 seoDescription: "Sample KTV Bangkok의 위치, 영업시간, 이미지, 연락 방법 및 예약 문의 정보를 확인하세요."
 thumbnail: "https://picsum.photos/seed/sample-ktv-bangkok-main/1200/700"
 thumbnailAlt: "방콕 KTV Sample 대표 이미지"
+thumbnailPosition: "top"
 gallery:
   - image: "https://picsum.photos/seed/sample-ktv-bangkok-room/1200/700"
     alt: "방콕 KTV Sample의 메인 라운지 공간"

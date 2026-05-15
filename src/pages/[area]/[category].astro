@@ -4,28 +4,81 @@ import JsonLd from '../../components/JsonLd.astro';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
-  const [areas, categories, venues] = await Promise.all([getCollection('areas'), getCollection('categories'), getCollection('venues')]);
-  const visible = venues.filter((v) => v.data.visible);
+  const [areas, categories, venues] = await Promise.all([
+    getCollection('areas'),
+    getCollection('categories'),
+    getCollection('venues'),
+  ]);
+
+  const visible = venues.filter((venue) => venue.data.visible);
   const paths = [];
+
   for (const area of areas) {
     for (const category of categories) {
-      const matched = visible.filter((v) => v.data.area === area.slug && v.data.category === category.slug);
+      const matched = visible.filter((venue) => venue.data.area === area.slug && venue.data.category === category.slug);
       if (matched.length >= 3 && area.data.intro.length >= 80 && category.data.intro.length >= 80) {
         paths.push({ params: { area: area.slug, category: category.slug }, props: { area, category, matched } });
       }
     }
   }
+
   return paths;
 }
 
 const { area, category, matched } = Astro.props;
-const title = `${area.data.name} ${category.data.name} 추천 업체 | 브랜드명`;
+const title = `${area.data.name} ${category.data.name} 추천 업체 | Thai Bam`;
 const description = `${area.data.name} 지역의 ${category.data.name} 업체 정보, 위치, 영업시간, 연락 방법을 확인하세요.`;
-const jsonLd = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, description, url: new URL(Astro.url.pathname, Astro.site).toString() };
+
+const getThumbPosition = (position) => {
+  if (position === 'top') return 'center top';
+  if (position === 'bottom') return 'center bottom';
+  return 'center center';
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: title,
+  description,
+  url: new URL(Astro.url.pathname, Astro.site).toString(),
+};
 ---
+
 <BaseLayout title={title} description={description}>
   <JsonLd data={jsonLd} />
-  <h1>{area.data.name} {category.data.name} 추천 업체</h1>
-  <p>{area.data.intro}</p>
-  <div class="grid">{matched.map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
+
+  <div class="directory-page">
+    <section class="directory-hero">
+      <h1>{area.data.name} {category.data.name} 추천 업체</h1>
+      <p>{area.data.intro}</p>
+      <div class="directory-meta">
+        <span class="directory-chip">지역: {area.data.name}</span>
+        <span class="directory-chip">카테고리: {category.data.name}</span>
+        <span class="directory-chip">등록 업체: {matched.length}개</span>
+      </div>
+    </section>
+
+    <section class="directory-section">
+      <h2>추천 목록</h2>
+      <div class="directory-grid">
+        {matched.map((venue) => (
+          <a class="directory-card" href={`/venue/${venue.slug}/`}>
+            <img
+              src={venue.data.thumbnail}
+              alt={venue.data.thumbnailAlt}
+              width="900"
+              height="560"
+              loading="lazy"
+              style={`object-position:${getThumbPosition(venue.data.thumbnailPosition)};`}
+            />
+            <div class="directory-card-body">
+              <p class="directory-card-meta">{area.data.name} · {category.data.name}</p>
+              <h3>{venue.data.title}</h3>
+              <p>{venue.data.shortDescription}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  </div>
 </BaseLayout>

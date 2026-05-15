@@ -46,6 +46,12 @@ const formatDate = (value) => {
   if (Number.isNaN(date.getTime())) return '';
   return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
 };
+
+const getThumbPosition = (position) => {
+  if (position === 'top') return 'center top';
+  if (position === 'bottom') return 'center bottom';
+  return 'center center';
+};
 ---
 
 <BaseLayout title="태국 KTV·스파·클럽 예약 정보 | Thai Bam" description="방콕, 파타야, 푸켓 지역의 KTV, 스파, 클럽 예약 및 VIP 가이드 정보를 빠르게 확인하고 문의까지 연결할 수 있습니다.">
@@ -75,7 +81,14 @@ const formatDate = (value) => {
       <div class="hero-cards">
         {heroVenues.map((venue) => (
           <a class="hero-card" href={`/venue/${venue.slug}/`}>
-            <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="640" height="380" loading="lazy" />
+            <img
+              src={venue.data.thumbnail}
+              alt={venue.data.thumbnailAlt}
+              width="640"
+              height="380"
+              loading="lazy"
+              style={`object-position:${getThumbPosition(venue.data.thumbnailPosition)};`}
+            />
             <div>
               <strong>{venue.data.title}</strong>
               <p>{venue.data.shortDescription}</p>
@@ -101,7 +114,14 @@ const formatDate = (value) => {
         {latestVenues.slice(0, 8).map((venue) => (
           <article class="post-card reveal">
             <a href={`/venue/${venue.slug}/`}>
-              <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1200" height="700" loading="lazy" />
+              <img
+                src={venue.data.thumbnail}
+                alt={venue.data.thumbnailAlt}
+                width="1200"
+                height="700"
+                loading="lazy"
+                style={`object-position:${getThumbPosition(venue.data.thumbnailPosition)};`}
+              />
               <div class="post-body">
                 <p class="post-meta">
                   {formatDate(venue.data.updatedAt)} · {venue.data.area} · {venue.data.category}
@@ -152,7 +172,14 @@ const formatDate = (value) => {
       <div class="category-list">
         {categoryHighlights.map((item) => (
           <a class="category-item" href={`/venue/${item.sample.slug}/`}>
-            <img src={item.sample.data.thumbnail} alt={item.sample.data.thumbnailAlt} width="900" height="560" loading="lazy" />
+            <img
+              src={item.sample.data.thumbnail}
+              alt={item.sample.data.thumbnailAlt}
+              width="900"
+              height="560"
+              loading="lazy"
+              style={`object-position:${getThumbPosition(item.sample.data.thumbnailPosition)};`}
+            />
             <div>
               <p>{item.category.data.name}</p>
               <h3>{item.sample.data.title}</h3>

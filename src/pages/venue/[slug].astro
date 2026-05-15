@@ -33,6 +33,12 @@ const fallbackSteps = [
 ];
 
 const timelineSteps = venue.data.usageSteps.length > 0 ? venue.data.usageSteps : fallbackSteps;
+const getThumbPosition = (position) => {
+  if (position === 'top') return 'center top';
+  if (position === 'bottom') return 'center bottom';
+  return 'center center';
+};
+const heroImagePosition = getThumbPosition(venue.data.thumbnailPosition);
 
 const dedupe = new Set();
 const galleryItems = [
@@ -66,7 +72,7 @@ const jsonLd = {
   <JsonLd data={jsonLd} />
 
   <section class="venue-hero reveal">
-    <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1400" height="820" loading="eager" />
+    <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1400" height="820" loading="eager" style={`object-position:${heroImagePosition};`} />
     <div class="hero-overlay">
       <p>{area?.data.name ?? venue.data.area} · {category?.data.name ?? venue.data.category}</p>
       <h1>{venue.data.title}</h1>
@@ -117,7 +123,14 @@ const jsonLd = {
           <div class="gallery-track" data-gallery-track>
             {galleryItems.map((item, index) => (
               <button class="gallery-slide" data-gallery-slide type="button" data-lightbox-open={index}>
-                <img src={item.image} alt={item.alt} loading={index === 0 ? 'eager' : 'lazy'} width="1200" height="700" />
+                <img
+                  src={item.image}
+                  alt={item.alt}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  width="1200"
+                  height="700"
+                  style={`object-position:${index === 0 ? heroImagePosition : 'center center'};`}
+                />
               </button>
             ))}
           </div>
@@ -155,7 +168,14 @@ const jsonLd = {
     <div class="related-grid">
       {related.map((item) => (
         <a class="related-card reveal" href={`/venue/${item.slug}/`}>
-          <img src={item.data.thumbnail} alt={item.data.thumbnailAlt} loading="lazy" width="600" height="360" />
+          <img
+            src={item.data.thumbnail}
+            alt={item.data.thumbnailAlt}
+            loading="lazy"
+            width="600"
+            height="360"
+            style={`object-position:${getThumbPosition(item.data.thumbnailPosition)};`}
+          />
           <div>
             <h3>{item.data.title}</h3>
             <p>{item.data.shortDescription}</p>
@@ -348,20 +368,20 @@ const jsonLd = {
   .core-card {
     padding: 12px 14px;
     border-radius: 14px;
-    border: 1px solid #dbe3f4;
-    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(10, 12, 18, 0.86);
   }
 
   .core-card span {
     display: block;
     font-size: 0.78rem;
-    color: #64748b;
+    color: #9ca8c2;
     margin-bottom: 4px;
   }
 
   .core-card strong {
     font-size: 0.95rem;
-    color: #0f172a;
+    color: #f6f9ff;
   }
 
   .venue-grid {
@@ -374,14 +394,15 @@ const jsonLd = {
   .section-block {
     margin: 18px 0;
     padding: 18px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 16px;
-    background: #ffffff;
+    background: rgba(8, 10, 14, 0.92);
   }
 
   .section-block h2 {
     margin: 0 0 12px;
     font-size: 1.2rem;
+    color: #ffe84a;
   }
 
   .timeline {
@@ -414,11 +435,12 @@ const jsonLd = {
   .timeline-item h3 {
     margin: 0;
     font-size: 1rem;
+    color: #f4f8ff;
   }
 
   .timeline-item p {
     margin: 6px 0 0;
-    color: #334155;
+    color: #d7deef;
     line-height: 1.6;
   }
 
@@ -462,9 +484,10 @@ const jsonLd = {
 
   .gallery-nav {
     height: 44px;
-    border: 1px solid #d1d5db;
+    border: 1px solid rgba(255, 255, 255, 0.24);
     border-radius: 12px;
-    background: #ffffff;
+    background: rgba(14, 17, 24, 0.96);
+    color: #f7fbff;
     font-size: 1.35rem;
     cursor: pointer;
   }
@@ -482,18 +505,18 @@ const jsonLd = {
     height: 8px;
     border: 0;
     border-radius: 999px;
-    background: #cbd5e1;
+    background: #6d778f;
     cursor: pointer;
   }
 
   .gallery-dot.is-active {
-    background: #0f172a;
+    background: #ff34ae;
     transform: scale(1.2);
   }
 
   .intro-body,
   .location-text {
-    color: #1f2937;
+    color: #d7deef;
     line-height: 1.75;
   }
 
@@ -506,7 +529,7 @@ const jsonLd = {
   .venue-body :global(p),
   .venue-body :global(li) {
     line-height: 1.8;
-    color: #1f2937;
+    color: #d7deef;
   }
 
   .venue-aside {
@@ -514,8 +537,8 @@ const jsonLd = {
     top: 78px;
     padding: 16px;
     border-radius: 14px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(8, 10, 14, 0.92);
     display: grid;
     gap: 8px;
     align-content: start;
@@ -524,19 +547,21 @@ const jsonLd = {
   .venue-aside h2 {
     margin: 0 0 4px;
     font-size: 1.05rem;
+    color: #ffe84a;
   }
 
   .venue-aside a {
     display: block;
     padding: 10px;
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    color: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #e7edf8;
     text-decoration: none;
+    background: rgba(255, 255, 255, 0.02);
   }
 
   .venue-aside a:hover {
-    background: #f8fafc;
+    background: rgba(0, 255, 238, 0.08);
   }
 
   .related-grid {
@@ -547,9 +572,9 @@ const jsonLd = {
 
   .related-card {
     display: block;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 14px;
-    background: #ffffff;
+    background: rgba(8, 10, 14, 0.92);
     overflow: hidden;
     text-decoration: none;
     color: inherit;
@@ -576,7 +601,7 @@ const jsonLd = {
     margin: 0;
     font-size: 0.9rem;
     line-height: 1.6;
-    color: #475569;
+    color: #bcc6dd;
   }
 
   .lightbox {

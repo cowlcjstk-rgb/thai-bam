@@ -68,6 +68,14 @@ collections:
 
       - { label: 대표 이미지, name: thumbnail, widget: image }
       - { label: 대표 이미지 ALT, name: thumbnailAlt, widget: string }
+      - label: 대표 이미지 정렬
+        name: thumbnailPosition
+        widget: select
+        default: center
+        options:
+          - { label: 상단 기준, value: top }
+          - { label: 중앙 기준, value: center }
+          - { label: 하단 기준, value: bottom }
 
       - label: 갤러리
         name: gallery

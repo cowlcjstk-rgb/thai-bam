@@ -39,6 +39,7 @@ const venues = defineCollection({
     seoDescription: z.string().max(170),
     thumbnail: z.string(),
     thumbnailAlt: z.string().min(10),
+    thumbnailPosition: z.enum(['top', 'center', 'bottom']).default('center'),
     gallery: z.array(z.object({ image: z.string(), alt: z.string() })).default([]),
     usageSteps: z.array(z.object({
       title: z.string(),

@@ -10,13 +10,96 @@ export async function getStaticPaths() {
 }
 
 const { area } = Astro.props;
-const allVenues = (await getCollection('venues')).filter((v) => v.data.visible && v.data.area === area.slug);
-const categories = await getCollection('categories');
-const jsonLd = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: area.data.seoTitle, description: area.data.seoDescription, url: new URL(Astro.url.pathname, Astro.site).toString() };
+const [allCategories, allVenues] = await Promise.all([
+  getCollection('categories'),
+  getCollection('venues'),
+]);
+
+const categories = allCategories.sort((a, b) => a.data.order - b.data.order);
+const areaVenues = allVenues
+  .filter((venue) => venue.data.visible && venue.data.area === area.slug)
+  .sort((a, b) => a.data.order - b.data.order);
+
+const getThumbPosition = (position) => {
+  if (position === 'top') return 'center top';
+  if (position === 'bottom') return 'center bottom';
+  return 'center center';
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: area.data.seoTitle,
+  description: area.data.seoDescription,
+  url: new URL(Astro.url.pathname, Astro.site).toString(),
+};
 ---
+
 <BaseLayout title={area.data.seoTitle} description={area.data.seoDescription} noindex={!area.data.indexable}>
   <JsonLd data={jsonLd} />
-  <h1>{area.data.name} 지역 추천 업체</h1><p>{area.data.intro}</p><BannerSlot position="area_top" />
-  <h2>카테고리 바로가기</h2><div class="grid">{categories.map((c) => <a class="card" href={`/${area.slug}/${c.slug}/`}>{area.data.name} {c.data.name}</a>)}</div>
-  <h2>등록 업체</h2><div class="grid">{allVenues.map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
+
+  <div class="directory-page">
+    <section class="directory-hero">
+      <h1>{area.data.name} 지역 추천 업체</h1>
+      <p>{area.data.intro}</p>
+      <div class="directory-meta">
+        <span class="directory-chip">지역: {area.data.name}</span>
+        <span class="directory-chip">등록 업체: {areaVenues.length}개</span>
+        <span class="directory-chip">카테고리: {categories.length}개</span>
+      </div>
+    </section>
+
+    <BannerSlot position="area_top" />
+
+    <section class="directory-section">
+      <h2>카테고리 바로가기</h2>
+      <div class="directory-grid">
+        {categories.map((category) => {
+          const sample = areaVenues.find((venue) => venue.data.category === category.slug);
+          return (
+            <a class="directory-card" href={`/${area.slug}/${category.slug}/`}>
+              {sample && (
+                <img
+                  src={sample.data.thumbnail}
+                  alt={sample.data.thumbnailAlt}
+                  width="900"
+                  height="560"
+                  loading="lazy"
+                  style={`object-position:${getThumbPosition(sample.data.thumbnailPosition)};`}
+                />
+              )}
+              <div class="directory-card-body">
+                <p class="directory-card-meta">{area.data.name}</p>
+                <h3>{category.data.name}</h3>
+                <p>{sample ? sample.data.shortDescription : `${area.data.name} 지역의 ${category.data.name} 목록으로 이동합니다.`}</p>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+    <section class="directory-section">
+      <h2>등록 업체</h2>
+      <div class="directory-grid">
+        {areaVenues.map((venue) => (
+          <a class="directory-card" href={`/venue/${venue.slug}/`}>
+            <img
+              src={venue.data.thumbnail}
+              alt={venue.data.thumbnailAlt}
+              width="900"
+              height="560"
+              loading="lazy"
+              style={`object-position:${getThumbPosition(venue.data.thumbnailPosition)};`}
+            />
+            <div class="directory-card-body">
+              <p class="directory-card-meta">{area.data.name} · {venue.data.category}</p>
+              <h3>{venue.data.title}</h3>
+              <p>{venue.data.shortDescription}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  </div>
 </BaseLayout>
