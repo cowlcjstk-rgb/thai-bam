@@ -226,7 +226,7 @@ const jsonLd = {
     };
 
     const openLightbox = (index) => {
-      if (!lightbox) return;
+      if (!lightbox || galleryData.length === 0) return;
       activeIndex = index;
       renderLightbox();
       lightbox.hidden = false;
@@ -249,11 +249,13 @@ const jsonLd = {
     });
 
     prevLightboxButton?.addEventListener('click', () => {
+      if (galleryData.length === 0) return;
       activeIndex = (activeIndex - 1 + galleryData.length) % galleryData.length;
       renderLightbox();
     });
 
     nextLightboxButton?.addEventListener('click', () => {
+      if (galleryData.length === 0) return;
       activeIndex = (activeIndex + 1) % galleryData.length;
       renderLightbox();
     });
@@ -261,11 +263,11 @@ const jsonLd = {
     document.addEventListener('keydown', (event) => {
       if (!lightbox || lightbox.hidden) return;
       if (event.key === 'Escape') closeLightbox();
-      if (event.key === 'ArrowLeft') {
+      if (event.key === 'ArrowLeft' && galleryData.length > 0) {
         activeIndex = (activeIndex - 1 + galleryData.length) % galleryData.length;
         renderLightbox();
       }
-      if (event.key === 'ArrowRight') {
+      if (event.key === 'ArrowRight' && galleryData.length > 0) {
         activeIndex = (activeIndex + 1) % galleryData.length;
         renderLightbox();
       }
@@ -587,6 +589,10 @@ const jsonLd = {
     gap: 12px;
     align-items: center;
     padding: 26px;
+  }
+
+  .lightbox[hidden] {
+    display: none !important;
   }
 
   .lightbox figure {
