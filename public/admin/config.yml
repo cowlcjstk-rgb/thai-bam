@@ -17,6 +17,10 @@ locale: ko
 media_folder: "public/uploads"
 public_folder: "/uploads"
 publish_mode: simple
+show_preview_links: false
+
+editor:
+  preview: false
 
 slug:
   encoding: ascii
@@ -25,22 +29,28 @@ slug:
 
 collections:
   - name: home
-    label: 홈페이지 메인 설정
+    label: 홈페이지 설정
     folder: src/content/home
     create: false
     delete: false
     slug: "{{slug}}"
-    summary: "홈페이지 히어로/카테고리 대표/SEO/FAQ"
+    summary: "홈 문구/섹션/FAQ 관리"
     fields:
-      - { label: 상단 라벨 문구, name: heroKicker, widget: string }
-      - { label: 메인 제목, name: heroTitle, widget: string }
-      - { label: 소개 문구, name: heroDescription, widget: text }
+      - { label: "1. 상단 라벨", name: heroKicker, widget: string, hint: "예: THAILAND NIGHT GUIDE" }
+      - { label: "2. 메인 제목", name: heroTitle, widget: string }
+      - { label: "3. 소개 문구", name: heroDescription, widget: text }
+      - { label: "4. 지역별 탐색 제목", name: areaSectionTitle, widget: string, required: false }
+      - { label: "5. 지역별 탐색 설명", name: areaSectionDescription, widget: text, required: false }
+      - { label: "6. 지역별 탐색 기본 접기", name: areaSectionCollapsed, widget: boolean, default: true, hint: "켜면 홈 접속 시 지역별 탐색 섹션이 접힌 상태로 시작됩니다." }
+      - { label: "7. 가이드 정보 제목", name: seoBlockTitle, widget: string, required: false }
+      - { label: "8. 가이드 정보 본문 1", name: seoBlockParagraph1, widget: text, required: false }
+      - { label: "9. 가이드 정보 본문 2", name: seoBlockParagraph2, widget: text, required: false }
       - label: 카테고리 대표 글
         name: categoryHighlights
         widget: list
         required: false
         summary: "{{fields.category}} → {{fields.venueSlug}}"
-        hint: "카테고리별로 메인에서 대표로 노출할 글을 지정하세요."
+        hint: "카테고리별 대표 글을 지정하세요. 지정하지 않으면 최신 글이 자동 노출됩니다."
         fields:
           - label: 카테고리
             name: category
@@ -57,12 +67,6 @@ collections:
             search_fields: [title, slug]
             value_field: slug
             display_fields: [title, slug]
-      - { label: 가이드 정보 제목, name: seoBlockTitle, widget: string, required: false }
-      - { label: 가이드 정보 본문 1, name: seoBlockParagraph1, widget: text, required: false }
-      - { label: 가이드 정보 본문 2, name: seoBlockParagraph2, widget: text, required: false }
-      - { label: 지역별 탐색 제목, name: areaSectionTitle, widget: string, required: false }
-      - { label: 지역별 탐색 설명, name: areaSectionDescription, widget: text, required: false }
-      - { label: 지역별 탐색 기본 접기, name: areaSectionCollapsed, widget: boolean, default: true, hint: "켜면 홈페이지 로드 시 지역별 탐색이 접힌 상태로 시작됩니다." }
       - label: 지역별 탐색 카드 설정
         name: areaExplorerAreas
         widget: list
@@ -101,25 +105,27 @@ collections:
     create: true
     slug: "{{fields.slug}}"
     summary: "{{title}} - {{area}} / {{category}}"
+    editor:
+      preview: false
+    sortable_fields: [updatedAt, order, title, area, category]
     fields:
-      - { label: 업체명, name: title, widget: string }
+      - { label: "1. 업체명", name: title, widget: string }
       - label: URL 슬러그
         name: slug
         widget: string
+        required: true
         hint: "영문 소문자/숫자/하이픈만 입력 (예: sample-ktv-bangkok)"
         pattern:
           - "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           - "슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다."
-
-      - label: 지역
+      - label: "2. 지역"
         name: area
         widget: select
         options:
           - { label: Bangkok, value: bangkok }
           - { label: Pattaya, value: pattaya }
           - { label: Chiang Mai, value: chiang-mai }
-
-      - label: 카테고리
+      - label: "3. 카테고리"
         name: category
         widget: select
         options:
@@ -127,25 +133,17 @@ collections:
           - { label: "Spa & Massage", value: spa-massage }
           - { label: "Club Reservation", value: club-reservation }
           - { label: "VIP Guide", value: vip-guide }
-
-      - { label: 요약 소개, name: shortDescription, widget: text, hint: "40~180자 권장" }
-      - { label: 상단 본문 소개, name: introBody, widget: text, required: false, hint: "상세 페이지 상단에 출력되는 SEO 본문" }
-
-      - label: 이용 순서 타임라인
-        name: usageSteps
-        widget: list
-        required: false
-        summary: "{{fields.title}}"
-        fields:
-          - { label: 단계 제목, name: title, widget: string }
-          - { label: 단계 설명, name: detail, widget: text }
-
-      - { label: SEO 제목, name: seoTitle, widget: string }
-      - { label: SEO 설명, name: seoDescription, widget: text }
-
-      - { label: 대표 이미지, name: thumbnail, widget: image }
-      - { label: 대표 이미지 ALT, name: thumbnailAlt, widget: string, hint: "이미지에 무엇이 보이는지 자연스럽게 설명해 주세요. 예: 방콕 KTV Sample 메인 라운지 전경" }
-      - label: 대표 이미지 정렬
+      - { label: "4. 노출 여부", name: visible, widget: boolean, default: true }
+      - { label: "5. 추천 노출", name: featured, widget: boolean, default: false }
+      - { label: "6. 정렬 순서", name: order, widget: number, default: 100 }
+      - { label: "7. 수정일", name: updatedAt, widget: datetime }
+      - { label: "8. 요약 소개", name: shortDescription, widget: text, hint: "목록에 보일 짧은 소개 (40~180자 권장)" }
+      - { label: "9. 상단 본문 소개", name: introBody, widget: text, required: false, hint: "상세 페이지 상단에 노출되는 소개 본문 (80자 이상 권장)" }
+      - { label: "10. SEO 제목", name: seoTitle, widget: string }
+      - { label: "11. SEO 설명", name: seoDescription, widget: text }
+      - { label: "12. 대표 이미지", name: thumbnail, widget: image }
+      - { label: "13. 대표 이미지 ALT", name: thumbnailAlt, widget: string, hint: "이미지 내용을 자연스럽게 설명하세요. 예: 방콕 KTV 메인 라운지 전경" }
+      - label: "14. 대표 이미지 정렬"
         name: thumbnailPosition
         widget: select
         default: center
@@ -153,41 +151,43 @@ collections:
           - { label: 상단 기준, value: top }
           - { label: 중앙 기준, value: center }
           - { label: 하단 기준, value: bottom }
-
-      - label: 갤러리
+      - label: "15. 갤러리"
         name: gallery
         widget: list
         required: false
         fields:
           - { label: 이미지, name: image, widget: image }
-          - { label: 이미지 ALT, name: alt, widget: string, hint: "사진 장면을 구체적으로 작성해 주세요. 예: 파타야 스파 내부 테라피 룸" }
-
-      - { label: 영업시간, name: openingHours, widget: string, required: false }
-      - { label: 가격대, name: priceRange, widget: text, required: false, hint: "여러 줄 입력 가능\n예시:\n1번 옵션은 1000바트\n2번 옵션은 2000바트\n3번 옵션은 3000바트" }
-      - { label: 위치 설명, name: addressText, widget: string, required: false }
-      - { label: 구글맵 링크, name: googleMapUrl, widget: string, required: false, hint: "공유 링크 붙여넣기 가능 (예: https://maps.app.goo.gl/....)" }
-      - { label: 위도(선택), name: latitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정을 원하면 입력하세요. 예: 13.7024493" }
-      - { label: 경도(선택), name: longitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정을 원하면 입력하세요. 예: 100.58403" }
-
-      - { label: 카카오 문의 링크, name: kakaoUrl, widget: string, required: false }
-      - { label: 라인 문의 링크, name: lineUrl, widget: string, required: false }
-
-      - { label: 추천 노출, name: featured, widget: boolean, default: false }
-      - { label: 노출 여부, name: visible, widget: boolean, default: true }
-      - { label: 정렬 순서, name: order, widget: number, default: 100 }
-      - { label: 수정일, name: updatedAt, widget: datetime }
-      - { label: 상세 본문, name: body, widget: markdown }
+          - { label: 이미지 ALT, name: alt, widget: string, hint: "예: 파타야 스파 내부 테라피 룸" }
+      - { label: "16. 영업시간", name: openingHours, widget: string, required: false, hint: "예: 19:00-02:00" }
+      - { label: "17. 가격대", name: priceRange, widget: text, required: false, hint: "여러 줄 입력 가능\n예시:\n1번 옵션은 1000바트\n2번 옵션은 2000바트\n3번 옵션은 3000바트" }
+      - label: "18. 이용 순서 타임라인"
+        name: usageSteps
+        widget: list
+        required: false
+        summary: "{{fields.title}}"
+        fields:
+          - { label: 단계 제목, name: title, widget: string }
+          - { label: 단계 설명, name: detail, widget: text }
+      - { label: "19. 위치 설명", name: addressText, widget: string, required: false, hint: "예: 파타야 터미널21 부근" }
+      - { label: "20. 구글맵 링크", name: googleMapUrl, widget: string, required: false, hint: "공유 링크 붙여넣기 가능 (예: https://maps.app.goo.gl/...)" }
+      - { label: "21. 위도(선택)", name: latitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정용 (예: 13.7024493)" }
+      - { label: "22. 경도(선택)", name: longitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정용 (예: 100.58403)" }
+      - { label: "23. 카카오 문의 링크", name: kakaoUrl, widget: string, required: false }
+      - { label: "24. 라인 문의 링크", name: lineUrl, widget: string, required: false }
+      - { label: "25. 상세 본문", name: body, widget: markdown, hint: "상세 안내 본문을 입력하세요. (지도는 본문 아래 자동 노출)" }
 
   - name: banners
-    label: 홈페이지 배너 설정
+    label: 배너 관리
     folder: src/content/banners
     create: true
     slug: "{{fields.position}}-{{fields.title}}"
     summary: "{{title}} ({{position}})"
+    editor:
+      preview: false
+    sortable_fields: [order, title, position]
     fields:
-      - { label: 배너명, name: title, widget: string }
-
-      - label: 노출 위치
+      - { label: "1. 배너명", name: title, widget: string }
+      - label: "2. 노출 위치"
         name: position
         widget: select
         options:
@@ -198,14 +198,12 @@ collections:
           - { label: 카테고리 페이지 상단, value: category_top }
           - { label: 업체 상세 상단, value: venue_top }
           - { label: 업체 상세 하단, value: venue_bottom }
-
-      - { label: 배너 이미지, name: image, widget: image }
-      - { label: 이미지 ALT, name: imageAlt, widget: string, hint: "배너에서 보여주는 핵심 내용을 설명해 주세요. 예: 메인 상단 프로모션 배너 이미지" }
-      - { label: 배너 설명, name: description, widget: string, required: false }
-      - { label: 버튼 문구, name: buttonText, widget: string, required: false }
-      - { label: 클릭 링크, name: linkUrl, widget: string, required: false, default: "#" }
-
-      - { label: 노출 여부, name: visible, widget: boolean, default: true }
-      - { label: 정렬 순서, name: order, widget: number, default: 100 }
-      - { label: 시작일, name: startDate, widget: datetime, required: false }
-      - { label: 종료일, name: endDate, widget: datetime, required: false }
+      - { label: "3. 배너 이미지", name: image, widget: image }
+      - { label: "4. 이미지 ALT", name: imageAlt, widget: string, hint: "예: 메인 상단 프로모션 배너 이미지" }
+      - { label: "5. 배너 설명", name: description, widget: string, required: false }
+      - { label: "6. 버튼 문구", name: buttonText, widget: string, required: false }
+      - { label: "7. 클릭 링크", name: linkUrl, widget: string, required: false, default: "#", hint: "없으면 # 유지" }
+      - { label: "8. 노출 여부", name: visible, widget: boolean, default: true }
+      - { label: "9. 정렬 순서", name: order, widget: number, default: 100 }
+      - { label: "10. 시작일", name: startDate, widget: datetime, required: false }
+      - { label: "11. 종료일", name: endDate, widget: datetime, required: false }
