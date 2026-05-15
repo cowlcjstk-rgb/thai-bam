@@ -1,0 +1,5 @@
+name = "thai-bam"
+compatibility_date = "2026-05-15"
+
+[assets]
+directory = "dist"
