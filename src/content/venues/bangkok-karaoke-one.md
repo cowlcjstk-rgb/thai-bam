@@ -11,7 +11,7 @@ usageSteps:
     detail: 결제 해야지 이용할 수 있겠지?
 seoTitle: Bangkok Karaoke One | 방콕 KTV 정보
 seoDescription: Bangkok Karaoke One의 위치, 운영 안내, 문의 정보를 확인하세요.
-thumbnail: https://picsum.photos/seed/bangkok-karaoke-one-main/1200/700
+thumbnail: /uploads/super_galaxy_cruise_photo09_staff-th-_260504.jpg
 thumbnailAlt: Bangkok Karaoke One 대표 이미지
 thumbnailPosition: top
 gallery:
