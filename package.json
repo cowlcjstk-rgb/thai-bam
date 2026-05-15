@@ -8,7 +8,8 @@
     "start": "astro dev",
     "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "cf:deploy": "node scripts/cf-deploy.mjs"
   },
   "dependencies": {
     "astro": "^5.8.1",
