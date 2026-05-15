@@ -20,25 +20,36 @@ gallery:
   - image: /uploads/kakaotalk_20260515_133803097.jpg
     alt: 홍석천
 openingHours: 19:00-02:00
-priceRange: 1번은 2000 바트 \n 2번은 2천바트
+priceRange: |-
+  1번은 2000 바트
+  2번은 3000 바트
+  3번은 4000 바트
 googleMapUrl: https://maps.app.goo.gl/nXv4CjdSyQtCgwpg9
 featured: true
 visible: true
 order: 1
 updatedAt: 2026-05-15
 ---
-Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.
+## Bangkok Karaoke One 상세 설명 본문입니다.Bangkok
+
+Karaoke One 상세 설명 본문입니다.Ban
+
+* gkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니
+* 111
+* 22
+* 33
+* 44
 
 Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.
 
+Bangkok Karaoke One 상세 설명 본문입
 
+1. ㅋㅋ
+2. ㄴㄴ
+3. ㅇㅇ
 
-
-
-Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.
+니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.Bangkok Karaoke One 상세 설명 본문입니다.
 
 Bangkok Karaoke One 상세 설명 본문입니다.
-
-
 
 Bangkok Karaoke One 상세 설명 본문입니다.
