@@ -1,0 +1,91 @@
+---
+import { getCollection } from 'astro:content';
+
+const [areasRaw, categoriesRaw] = await Promise.all([
+  getCollection('areas'),
+  getCollection('categories'),
+]);
+
+const areas = areasRaw.sort((a, b) => a.data.order - b.data.order);
+const categories = categoriesRaw.sort((a, b) => a.data.order - b.data.order);
+
+const normalizePath = (value) => {
+  if (!value) return '/';
+  return value.endsWith('/') ? value : `${value}/`;
+};
+
+const pathname = normalizePath(Astro.url.pathname);
+
+const isExactActive = (href) => pathname === normalizePath(href);
+const isPrefixActive = (href) => pathname.startsWith(normalizePath(href));
+const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
+---
+
+<nav class="site-menu-tabs" aria-label="사이트 메뉴">
+  <div class="menu-group">
+    <a class:list={{ active: isExactActive('/') }} href="/">홈</a>
+    {areas.map((area) => (
+      <a class:list={{ active: isPrefixActive(`/${area.slug}/`) }} href={`/${area.slug}/`}>{area.data.name}</a>
+    ))}
+  </div>
+
+  <div class="menu-group menu-category">
+    {categories.map((category) => (
+      <a class:list={{ active: isCategoryActive(category.slug) }} href={`/${category.slug}/`}>{category.data.name}</a>
+    ))}
+  </div>
+</nav>
+
+<style>
+  .site-menu-tabs {
+    position: sticky;
+    top: 8px;
+    z-index: 40;
+    margin-bottom: 14px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(6, 8, 13, 0.86);
+    backdrop-filter: blur(8px);
+    display: grid;
+    gap: 8px;
+  }
+
+  .menu-group {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .menu-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu-group a {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f2f6ff;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .menu-group a.active {
+    border-color: rgba(255, 52, 174, 0.86);
+    background: rgba(255, 52, 174, 0.2);
+    color: #ffffff;
+  }
+
+  .menu-category a.active {
+    border-color: rgba(34, 244, 255, 0.8);
+    background: rgba(34, 244, 255, 0.16);
+  }
+</style>

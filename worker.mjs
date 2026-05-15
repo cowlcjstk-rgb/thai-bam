@@ -1,5 +1,7 @@
 const STATE_COOKIE = "decap_oauth_state";
 const STATE_MAX_AGE = 600;
+const ADMIN_DEFAULT_ID = "admin";
+const ADMIN_DEFAULT_PASSWORD = "1q2w3e4r!Q";
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -40,9 +42,48 @@ function oauthError(message) {
   );
 }
 
+function unauthorizedResponse() {
+  return new Response("Authentication required.", {
+    status: 401,
+    headers: {
+      "www-authenticate": 'Basic realm="Thai Bam Admin", charset="UTF-8"',
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function isAdminAuthorized(request, env) {
+  const authorization = request.headers.get("authorization");
+  if (!authorization || !authorization.startsWith("Basic ")) return false;
+
+  let decoded = "";
+  try {
+    decoded = atob(authorization.slice(6).trim());
+  } catch {
+    return false;
+  }
+
+  const separatorIndex = decoded.indexOf(":");
+  if (separatorIndex < 0) return false;
+
+  const username = decoded.slice(0, separatorIndex);
+  const password = decoded.slice(separatorIndex + 1);
+
+  const validId = env.ADMIN_LOGIN_ID || ADMIN_DEFAULT_ID;
+  const validPassword = env.ADMIN_LOGIN_PASSWORD || ADMIN_DEFAULT_PASSWORD;
+
+  return username === validId && password === validPassword;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
+      if (!isAdminAuthorized(request, env)) {
+        return unauthorizedResponse();
+      }
+    }
 
     if (url.pathname === "/oauth") {
       const clientId = env.GITHUB_OAUTH_CLIENT_ID;

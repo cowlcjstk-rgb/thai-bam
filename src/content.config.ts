@@ -27,6 +27,15 @@ const categories = defineCollection({
   }),
 });
 
+const home = defineCollection({
+  type: 'content',
+  schema: z.object({
+    heroKicker: z.string().min(3).max(80),
+    heroTitle: z.string().min(10).max(150),
+    heroDescription: z.string().min(40).max(500),
+  }),
+});
+
 const venues = defineCollection({
   type: 'content',
   schema: z.object({
@@ -77,4 +86,4 @@ const banners = defineCollection({
   }),
 });
 
-export const collections = { areas, categories, venues, banners };
+export const collections = { areas, categories, home, venues, banners };

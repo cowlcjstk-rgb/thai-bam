@@ -7,6 +7,16 @@ import { getCollection } from 'astro:content';
 const areas = (await getCollection('areas')).sort((a, b) => a.data.order - b.data.order);
 const categories = (await getCollection('categories')).sort((a, b) => a.data.order - b.data.order);
 const venues = (await getCollection('venues')).filter((v) => v.data.visible).sort((a, b) => a.data.order - b.data.order);
+const homeEntries = await getCollection('home');
+
+const defaultHero = {
+  heroKicker: 'THAILAND NIGHT GUIDE',
+  heroTitle: '방콕 · 파타야 · 치앙마이 프리미엄 나이트라이프 가이드',
+  heroDescription:
+    'Thai Bam은 태국 주요 지역의 KTV, 스파, 클럽 예약, VIP 가이드 정보를 정적 페이지로 정리한 디렉토리입니다. 지역 페이지, 카테고리 페이지, 업체 상세 페이지를 내부 링크로 연결해 빠른 탐색과 문의 전환에 최적화했습니다.',
+};
+
+const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?? homeEntries[0]?.data ?? defaultHero;
 
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
 const featuredVenues = venues.filter((v) => v.data.featured).slice(0, 4);
@@ -58,19 +68,10 @@ const getThumbPosition = (position) => {
   <JsonLd data={jsonLd} />
 
   <div class="home-page">
-    <div class="top-browser-bar reveal">
-      <span class="dot" aria-hidden="true"></span>
-      <p>thai-bam.mkmdtkvypy.workers.dev</p>
-      <span class="badge">LIVE</span>
-    </div>
-
     <section class="home-hero reveal">
-      <p class="hero-kicker">THAILAND NIGHT GUIDE</p>
-      <h1>방콕 · 파타야 · 치앙마이 프리미엄 나이트라이프 가이드</h1>
-      <p class="hero-copy">
-        Thai Bam은 태국 주요 지역의 KTV, 스파, 클럽 예약, VIP 가이드 정보를 정적 페이지로 정리한 디렉토리입니다.
-        지역 페이지, 카테고리 페이지, 업체 상세 페이지를 내부 링크로 연결해 빠른 탐색과 문의 전환에 최적화했습니다.
-      </p>
+      <p class="hero-kicker">{homeHero.heroKicker}</p>
+      <h1>{homeHero.heroTitle}</h1>
+      <p class="hero-copy">{homeHero.heroDescription}</p>
 
       <div class="hero-actions">
         <a href="/bangkok/">방콕 보기</a>
@@ -256,43 +257,6 @@ const getThumbPosition = (position) => {
   .home-page {
     display: grid;
     gap: 16px;
-  }
-
-  .top-browser-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
-    background: rgba(10, 10, 12, 0.92);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .top-browser-bar p {
-    margin: 0;
-    font-size: 0.9rem;
-    letter-spacing: 0.01em;
-    color: #eceff5;
-    flex: 1;
-  }
-
-  .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: #ffe600;
-    box-shadow: 0 0 12px #ffe600;
-  }
-
-  .badge {
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: #121319;
-    border: 1px solid #323545;
-    color: #67faff;
-    font-size: 0.74rem;
-    font-weight: 700;
   }
 
   .home-hero {

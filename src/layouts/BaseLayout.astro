@@ -1,5 +1,6 @@
 ﻿---
 import SEO from '../components/SEO.astro';
+import SiteMenuTabs from '../components/SiteMenuTabs.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -19,6 +20,7 @@ const { title, description, noindex = false } = Astro.props;
   </head>
   <body>
     <main>
+      <SiteMenuTabs />
       <slot />
     </main>
   </body>

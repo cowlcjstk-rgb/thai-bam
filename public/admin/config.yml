@@ -24,6 +24,18 @@ slug:
   sanitize_replacement: "-"
 
 collections:
+  - name: home
+    label: 홈페이지 상단 문구
+    folder: src/content/home
+    create: false
+    delete: false
+    slug: "{{slug}}"
+    summary: "홈 히어로 문구"
+    fields:
+      - { label: 상단 키커 문구, name: heroKicker, widget: string }
+      - { label: 메인 제목, name: heroTitle, widget: string }
+      - { label: 소개 문구, name: heroDescription, widget: text }
+
   - name: venues
     label: 업체 글 관리
     folder: src/content/venues
