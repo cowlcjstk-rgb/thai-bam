@@ -7,6 +7,12 @@ import { getCollection } from 'astro:content';
 const areas = (await getCollection('areas')).sort((a, b) => a.data.order - b.data.order);
 const categories = (await getCollection('categories')).sort((a, b) => a.data.order - b.data.order);
 const venues = (await getCollection('venues')).filter((v) => v.data.visible).sort((a, b) => a.data.order - b.data.order);
+const categoryExamples = categories
+  .map((category) => {
+    const sample = venues.find((venue) => venue.data.category === category.slug);
+    return sample ? { category, sample } : null;
+  })
+  .filter(Boolean);
 
 const jsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: '브랜드명', url: new URL('/', Astro.site).toString(), inLanguage: 'ko' };
 ---
@@ -18,5 +24,14 @@ const jsonLd = { '@context': 'https://schema.org', '@type': 'WebSite', name: '�
   <h2>주요 지역</h2><div class="grid">{areas.map((area) => <a class="card" href={`/${area.slug}/`}>{area.data.name}</a>)}</div>
   <h2>주요 카테고리</h2><div class="grid">{categories.map((c) => <a class="card" href={`/${c.slug}/`}>{c.data.name}</a>)}</div>
   <BannerSlot position="home_middle" />
+  <h2>카테고리별 예시 글</h2>
+  <div class="grid">
+    {categoryExamples.map((item) => (
+      <a class="card" href={`/venue/${item.sample.slug}/`}>
+        <strong>{item.category.data.name}</strong>
+        <p>{item.sample.data.title}</p>
+      </a>
+    ))}
+  </div>
   <h2>추천 업체</h2><div class="grid">{venues.slice(0, 6).map((v) => <a class="card" href={`/venue/${v.slug}/`}>{v.data.title}</a>)}</div>
 </BaseLayout>
