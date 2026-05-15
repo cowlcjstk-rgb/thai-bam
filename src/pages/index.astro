@@ -15,6 +15,7 @@ const defaultHero = {
   heroDescription:
     'Thai Bam은 태국 주요 지역의 KTV, 스파, 클럽 예약, VIP 가이드 정보를 정적 페이지로 정리한 디렉토리입니다. 지역 페이지, 카테고리 페이지, 업체 상세 페이지를 내부 링크로 연결해 빠른 탐색과 문의 전환에 최적화했습니다.',
 };
+const resolveVenueSlug = (entry) => entry.data.slug?.trim() || entry.slug;
 
 const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?? homeEntries[0]?.data ?? defaultHero;
 const POST_INITIAL_COUNT = 5;
@@ -33,7 +34,7 @@ const autoCategoryHighlights = categories
 const configuredCategoryHighlights = (homeHero.categoryHighlights ?? [])
   .map((item) => {
     const category = categories.find((entry) => entry.slug === item.category);
-    const sample = latestVenues.find((entry) => entry.slug === item.venueSlug);
+    const sample = latestVenues.find((entry) => resolveVenueSlug(entry) === item.venueSlug);
     return category && sample ? { category, sample } : null;
   })
   .filter(Boolean);
@@ -81,7 +82,7 @@ const configuredAreaCards = (homeHero.areaExplorerAreas ?? [])
     const area = areas.find((entry) => entry.slug === item.area);
     if (!area) return null;
     const manualVenues = (item.venueSlugs ?? [])
-      .map((slug) => venues.find((entry) => entry.slug === slug))
+      .map((slug) => venues.find((entry) => resolveVenueSlug(entry) === slug))
       .filter(Boolean);
     return {
       area,
@@ -132,7 +133,7 @@ const getThumbPosition = (position) => {
 
       <div class="hero-cards">
         {heroVenues.map((venue) => (
-          <a class="hero-card" href={`/venue/${venue.slug}/`}>
+          <a class="hero-card" href={`/venue/${resolveVenueSlug(venue)}/`}>
             <img
               src={venue.data.thumbnail}
               alt={venue.data.thumbnailAlt}
@@ -165,7 +166,7 @@ const getThumbPosition = (position) => {
       <div class="post-grid">
         {latestVenues.map((venue, index) => (
           <article class="post-card" data-post-item hidden={index >= POST_INITIAL_COUNT}>
-            <a href={`/venue/${venue.slug}/`}>
+            <a href={`/venue/${resolveVenueSlug(venue)}/`}>
               <img
                 src={venue.data.thumbnail}
                 alt={venue.data.thumbnailAlt}
@@ -227,7 +228,7 @@ const getThumbPosition = (position) => {
               <div class="area-links">
                 <a href={`/${area.slug}/`}>지역 페이지</a>
                 {areaVenues.map((venue) => (
-                  <a href={`/venue/${venue.slug}/`}>{venue.data.title}</a>
+                  <a href={`/venue/${resolveVenueSlug(venue)}/`}>{venue.data.title}</a>
                 ))}
               </div>
             </article>
@@ -242,7 +243,7 @@ const getThumbPosition = (position) => {
       <h2>카테고리 대표 글</h2>
       <div class="category-list">
         {categoryHighlights.map((item) => (
-          <a class="category-item" href={`/venue/${item.sample.slug}/`}>
+          <a class="category-item" href={`/venue/${resolveVenueSlug(item.sample)}/`}>
             <img
               src={item.sample.data.thumbnail}
               alt={item.sample.data.thumbnailAlt}

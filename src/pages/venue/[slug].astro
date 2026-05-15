@@ -7,12 +7,14 @@ import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
   const venues = await getCollection('venues');
+  const resolveVenueSlug = (entry) => entry.data.slug?.trim() || entry.slug;
   return venues
-    .filter((v) => v.data.visible)
-    .map((venue) => ({ params: { slug: venue.slug }, props: { venue } }));
+    .filter((entry) => entry.data.visible)
+    .map((venue) => ({ params: { slug: resolveVenueSlug(venue) }, props: { venue } }));
 }
 
 const { venue } = Astro.props;
+const venueSlug = venue.data.slug?.trim() || venue.slug;
 const [areas, categories, venues] = await Promise.all([
   getCollection('areas'),
   getCollection('categories'),
@@ -23,7 +25,7 @@ const area = areas.find((a) => a.slug === venue.data.area);
 const category = categories.find((c) => c.slug === venue.data.category);
 
 const related = venues
-  .filter((v) => v.data.visible && v.slug !== venue.slug && v.data.area === venue.data.area)
+  .filter((entry) => entry.data.visible && (entry.data.slug?.trim() || entry.slug) !== venueSlug && entry.data.area === venue.data.area)
   .slice(0, 6);
 
 const fallbackSteps = [
@@ -41,24 +43,42 @@ const getThumbPosition = (position) => {
 const heroImagePosition = getThumbPosition(venue.data.thumbnailPosition);
 const priceText = venue.data.priceRange?.trim() ?? '';
 const normalizedPriceText = priceText.replace(/\\n/g, '\n');
-const priceSummary = normalizedPriceText ? normalizedPriceText.split(/\r?\n/)[0] : '문의 후 안내';
+const priceFallback = '문의 후 안내';
+const priceLines = normalizedPriceText
+  ? normalizedPriceText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+  : [];
+const hasLongPriceText = priceLines.length >= 2;
+const priceSummary = normalizedPriceText || priceFallback;
 
 const extractCoords = (raw) => {
   if (!raw) return undefined;
 
+  const markerMatches = [...raw.matchAll(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/g)];
+  if (markerMatches.length > 0) {
+    const last = markerMatches[markerMatches.length - 1];
+    return { lat: Number(last[1]), lng: Number(last[2]) };
+  }
+
+  const twoDThreeDMatches = [...raw.matchAll(/!2d(-?\d+(?:\.\d+)?)!3d(-?\d+(?:\.\d+)?)/g)];
+  if (twoDThreeDMatches.length > 0) {
+    const last = twoDThreeDMatches[twoDThreeDMatches.length - 1];
+    return { lat: Number(last[2]), lng: Number(last[1]) };
+  }
+
   const atMatch = raw.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
   if (atMatch) return { lat: Number(atMatch[1]), lng: Number(atMatch[2]) };
 
-  const markerMatch = raw.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-  if (markerMatch) return { lat: Number(markerMatch[1]), lng: Number(markerMatch[2]) };
-
-  const pairMatch = raw.match(/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
-  if (pairMatch) return { lat: Number(pairMatch[1]), lng: Number(pairMatch[2]) };
+  const strictPairMatch = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (strictPairMatch) return { lat: Number(strictPairMatch[1]), lng: Number(strictPairMatch[2]) };
 
   return undefined;
 };
 
-const isFiniteCoord = (value) => Number.isFinite(value) && Math.abs(value) <= 180;
+const isValidLat = (value) => Number.isFinite(value) && Math.abs(value) <= 90;
+const isValidLng = (value) => Number.isFinite(value) && Math.abs(value) <= 180;
 const toMapEmbedByCoords = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
 
 const resolveMapData = async (mapUrl, latitude, longitude) => {
@@ -94,7 +114,7 @@ const resolveMapData = async (mapUrl, latitude, longitude) => {
   }
 
   const coords = extractCoords(resolvedUrl) ?? extractCoords(originalUrl);
-  if (coords && isFiniteCoord(coords.lat) && isFiniteCoord(coords.lng)) {
+  if (coords && isValidLat(coords.lat) && isValidLng(coords.lng)) {
     return {
       externalUrl: originalUrl,
       embedUrl: toMapEmbedByCoords(coords.lat, coords.lng),
@@ -103,8 +123,17 @@ const resolveMapData = async (mapUrl, latitude, longitude) => {
 
   try {
     const parsed = new URL(resolvedUrl);
-    const query = parsed.searchParams.get('q') ?? parsed.searchParams.get('query');
+    const queryParams = ['q', 'query', 'll', 'center', 'destination', 'origin'];
+    const query = queryParams.map((key) => parsed.searchParams.get(key)).find(Boolean);
     if (query) {
+      const queryCoords = extractCoords(query);
+      if (queryCoords && isValidLat(queryCoords.lat) && isValidLng(queryCoords.lng)) {
+        return {
+          externalUrl: originalUrl,
+          embedUrl: toMapEmbedByCoords(queryCoords.lat, queryCoords.lng),
+        };
+      }
+
       return {
         externalUrl: originalUrl,
         embedUrl: `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`,
@@ -144,7 +173,7 @@ const jsonLd = {
   name: venue.data.title,
   description: venue.data.shortDescription,
   image: [new URL(venue.data.thumbnail, Astro.site).toString()],
-  url: new URL(`/venue/${venue.slug}/`, Astro.site).toString(),
+  url: new URL(`/venue/${venueSlug}/`, Astro.site).toString(),
   address: {
     '@type': 'PostalAddress',
     addressLocality: area?.data.name ?? venue.data.area,
@@ -177,7 +206,12 @@ const jsonLd = {
     </div>
     <div class="core-card">
       <span>가격대</span>
-      <strong>{priceSummary}</strong>
+      <strong class:list={['price-summary', hasLongPriceText && 'is-collapsible']} data-price-summary>{priceSummary}</strong>
+      {hasLongPriceText && (
+        <button type="button" class="price-toggle" data-price-toggle aria-expanded="true">
+          접기
+        </button>
+      )}
     </div>
   </section>
 
@@ -225,6 +259,9 @@ const jsonLd = {
           </div>
         )}
         <p class="location-text">{venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.'}</p>
+        <article class="venue-body">
+          <Content />
+        </article>
         {mapEmbedUrl && (
           <div class="map-embed">
             <iframe
@@ -241,9 +278,6 @@ const jsonLd = {
             <a class="map-link" href={mapExternalUrl} target="_blank" rel="noopener noreferrer nofollow">구글맵 위치 보기</a>
           </p>
         )}
-        <article class="venue-body">
-          <Content />
-        </article>
       </section>
 
       <section class="section-block reveal">
@@ -269,7 +303,7 @@ const jsonLd = {
     <h2>관련 게시물</h2>
     <div class="related-grid">
       {related.map((item) => (
-        <a class="related-card reveal" href={`/venue/${item.slug}/`}>
+        <a class="related-card reveal" href={`/venue/${item.data.slug?.trim() || item.slug}/`}>
           <img
             src={item.data.thumbnail}
             alt={item.data.thumbnailAlt}
@@ -396,7 +430,24 @@ const jsonLd = {
     });
 
     const coreSticky = document.querySelector('[data-core-sticky]');
+    const priceSummary = document.querySelector('[data-price-summary]');
+    const priceToggle = document.querySelector('[data-price-toggle]');
     const compactMedia = window.matchMedia('(max-width: 720px)');
+
+    const updatePriceToggleLabel = (expanded) => {
+      if (!priceToggle) return;
+      priceToggle.textContent = expanded ? '접기' : '펼치기';
+      priceToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      priceSummary?.classList.toggle('is-collapsed', !expanded);
+    };
+
+    if (priceToggle && priceSummary) {
+      updatePriceToggleLabel(true);
+      priceToggle.addEventListener('click', () => {
+        const expanded = priceToggle.getAttribute('aria-expanded') === 'true';
+        updatePriceToggleLabel(!expanded);
+      });
+    }
 
     const updateCoreStickyCompact = () => {
       if (!coreSticky) return;
@@ -511,6 +562,32 @@ const jsonLd = {
     font-size: 0.95rem;
     color: #f6f9ff;
     transition: font-size 0.18s ease;
+  }
+
+  .core-card .price-summary {
+    display: block;
+    white-space: pre-line;
+    line-height: 1.5;
+  }
+
+  .core-card .price-summary.is-collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .price-toggle {
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #dbe8ff;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .venue-grid {
@@ -858,6 +935,10 @@ const jsonLd = {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .venue-core-sticky.is-compact .price-toggle {
+      display: none;
     }
 
     .section-block {

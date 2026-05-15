@@ -19,6 +19,7 @@ const categories = allCategories.sort((a, b) => a.data.order - b.data.order);
 const areaVenues = allVenues
   .filter((venue) => venue.data.visible && venue.data.area === area.slug)
   .sort((a, b) => a.data.order - b.data.order);
+const resolveVenueSlug = (entry) => entry.data.slug?.trim() || entry.slug;
 
 const getThumbPosition = (position) => {
   if (position === 'top') return 'center top';
@@ -56,8 +57,9 @@ const jsonLd = {
       <div class="directory-grid">
         {categories.map((category) => {
           const sample = areaVenues.find((venue) => venue.data.category === category.slug);
+          const targetHref = sample ? `/${area.slug}/${category.slug}/` : `/${category.slug}/`;
           return (
-            <a class="directory-card" href={`/${area.slug}/${category.slug}/`}>
+            <a class="directory-card" href={targetHref}>
               {sample && (
                 <img
                   src={sample.data.thumbnail}
@@ -83,7 +85,7 @@ const jsonLd = {
       <h2>등록 업체</h2>
       <div class="directory-grid">
         {areaVenues.map((venue) => (
-          <a class="directory-card" href={`/venue/${venue.slug}/`}>
+          <a class="directory-card" href={`/venue/${resolveVenueSlug(venue)}/`}>
             <img
               src={venue.data.thumbnail}
               alt={venue.data.thumbnailAlt}

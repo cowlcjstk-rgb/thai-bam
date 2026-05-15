@@ -16,7 +16,7 @@ export async function getStaticPaths() {
   for (const area of areas) {
     for (const category of categories) {
       const matched = visible.filter((venue) => venue.data.area === area.slug && venue.data.category === category.slug);
-      if (matched.length >= 3 && area.data.intro.length >= 80 && category.data.intro.length >= 80) {
+      if (matched.length >= 1) {
         paths.push({ params: { area: area.slug, category: category.slug }, props: { area, category, matched } });
       }
     }
@@ -34,6 +34,7 @@ const getThumbPosition = (position) => {
   if (position === 'bottom') return 'center bottom';
   return 'center center';
 };
+const resolveVenueSlug = (entry) => entry.data.slug?.trim() || entry.slug;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -62,7 +63,7 @@ const jsonLd = {
       <h2>추천 목록</h2>
       <div class="directory-grid">
         {matched.map((venue) => (
-          <a class="directory-card" href={`/venue/${venue.slug}/`}>
+          <a class="directory-card" href={`/venue/${resolveVenueSlug(venue)}/`}>
             <img
               src={venue.data.thumbnail}
               alt={venue.data.thumbnailAlt}

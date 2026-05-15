@@ -103,7 +103,13 @@ collections:
     summary: "{{title}} - {{area}} / {{category}}"
     fields:
       - { label: 업체명, name: title, widget: string }
-      - { label: URL 슬러그, name: slug, widget: string, hint: "예: sample-ktv-bangkok" }
+      - label: URL 슬러그
+        name: slug
+        widget: string
+        hint: "영문 소문자/숫자/하이픈만 입력 (예: sample-ktv-bangkok)"
+        pattern:
+          - "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          - "슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다."
 
       - label: 지역
         name: area
@@ -160,6 +166,8 @@ collections:
       - { label: 가격대, name: priceRange, widget: text, required: false, hint: "여러 줄 입력 가능\n예시:\n1번 옵션은 1000바트\n2번 옵션은 2000바트\n3번 옵션은 3000바트" }
       - { label: 위치 설명, name: addressText, widget: string, required: false }
       - { label: 구글맵 링크, name: googleMapUrl, widget: string, required: false, hint: "공유 링크 붙여넣기 가능 (예: https://maps.app.goo.gl/....)" }
+      - { label: 위도(선택), name: latitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정을 원하면 입력하세요. 예: 13.7024493" }
+      - { label: 경도(선택), name: longitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정을 원하면 입력하세요. 예: 100.58403" }
 
       - { label: 카카오 문의 링크, name: kakaoUrl, widget: string, required: false }
       - { label: 라인 문의 링크, name: lineUrl, widget: string, required: false }
