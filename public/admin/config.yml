@@ -25,16 +25,75 @@ slug:
 
 collections:
   - name: home
-    label: 홈페이지 상단 문구
+    label: 홈페이지 메인 설정
     folder: src/content/home
     create: false
     delete: false
     slug: "{{slug}}"
-    summary: "메인 히어로 문구"
+    summary: "홈페이지 히어로/카테고리 대표/SEO/FAQ"
     fields:
       - { label: 상단 라벨 문구, name: heroKicker, widget: string }
       - { label: 메인 제목, name: heroTitle, widget: string }
       - { label: 소개 문구, name: heroDescription, widget: text }
+      - label: 카테고리 대표 글
+        name: categoryHighlights
+        widget: list
+        required: false
+        summary: "{{fields.category}} → {{fields.venueSlug}}"
+        hint: "카테고리별로 메인에서 대표로 노출할 글을 지정하세요."
+        fields:
+          - label: 카테고리
+            name: category
+            widget: select
+            options:
+              - { label: "KTV & Karaoke", value: ktv-karaoke }
+              - { label: "Spa & Massage", value: spa-massage }
+              - { label: "Club Reservation", value: club-reservation }
+              - { label: "VIP Guide", value: vip-guide }
+          - label: 대표 글 선택
+            name: venueSlug
+            widget: relation
+            collection: venues
+            search_fields: [title, slug]
+            value_field: slug
+            display_fields: [title, slug]
+      - { label: 가이드 정보 제목, name: seoBlockTitle, widget: string, required: false }
+      - { label: 가이드 정보 본문 1, name: seoBlockParagraph1, widget: text, required: false }
+      - { label: 가이드 정보 본문 2, name: seoBlockParagraph2, widget: text, required: false }
+      - { label: 지역별 탐색 제목, name: areaSectionTitle, widget: string, required: false }
+      - { label: 지역별 탐색 설명, name: areaSectionDescription, widget: text, required: false }
+      - { label: 지역별 탐색 기본 접기, name: areaSectionCollapsed, widget: boolean, default: true, hint: "켜면 홈페이지 로드 시 지역별 탐색이 접힌 상태로 시작됩니다." }
+      - label: 지역별 탐색 카드 설정
+        name: areaExplorerAreas
+        widget: list
+        required: false
+        summary: "{{fields.area}}"
+        hint: "리스트 순서대로 카드가 노출됩니다. 대표 글을 비우면 해당 지역의 최신 글 3개가 자동 표시됩니다."
+        fields:
+          - label: 지역
+            name: area
+            widget: select
+            options:
+              - { label: Bangkok, value: bangkok }
+              - { label: Pattaya, value: pattaya }
+              - { label: Chiang Mai, value: chiang-mai }
+          - label: 대표 글(선택)
+            name: venueSlugs
+            widget: relation
+            required: false
+            collection: venues
+            search_fields: [title, slug, area, category]
+            value_field: slug
+            display_fields: [title, area, category]
+            multiple: true
+      - label: 자주 묻는 질문
+        name: faqItems
+        widget: list
+        required: false
+        summary: "{{fields.question}}"
+        fields:
+          - { label: 질문, name: question, widget: string }
+          - { label: 답변, name: answer, widget: text }
 
   - name: venues
     label: 업체 글 관리

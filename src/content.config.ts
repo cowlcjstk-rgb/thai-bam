@@ -33,6 +33,24 @@ const home = defineCollection({
     heroKicker: z.string().min(3).max(80),
     heroTitle: z.string().min(10).max(150),
     heroDescription: z.string().min(40).max(500),
+    categoryHighlights: z.array(z.object({
+      category: z.string(),
+      venueSlug: z.string(),
+    })).default([]),
+    seoBlockTitle: z.string().min(10).max(120).optional(),
+    seoBlockParagraph1: z.string().min(40).max(600).optional(),
+    seoBlockParagraph2: z.string().min(40).max(600).optional(),
+    faqItems: z.array(z.object({
+      question: z.string().min(4).max(140),
+      answer: z.string().min(10).max(400),
+    })).default([]),
+    areaSectionTitle: z.string().min(2).max(80).optional(),
+    areaSectionDescription: z.string().max(240).optional(),
+    areaSectionCollapsed: z.boolean().default(true),
+    areaExplorerAreas: z.array(z.object({
+      area: z.string(),
+      venueSlugs: z.array(z.string()).default([]),
+    })).default([]),
   }),
 });
 

@@ -23,14 +23,24 @@ const POST_BATCH_SIZE = 5;
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
 const featuredVenues = venues.filter((v) => v.data.featured).slice(0, 4);
 const heroVenues = featuredVenues.length > 0 ? featuredVenues : latestVenues.slice(0, 4);
-const categoryHighlights = categories
+const autoCategoryHighlights = categories
   .map((category) => {
     const sample = latestVenues.find((venue) => venue.data.category === category.slug);
     return sample ? { category, sample } : null;
   })
   .filter(Boolean);
 
-const faqItems = [
+const configuredCategoryHighlights = (homeHero.categoryHighlights ?? [])
+  .map((item) => {
+    const category = categories.find((entry) => entry.slug === item.category);
+    const sample = latestVenues.find((entry) => entry.slug === item.venueSlug);
+    return category && sample ? { category, sample } : null;
+  })
+  .filter(Boolean);
+
+const categoryHighlights = configuredCategoryHighlights.length > 0 ? configuredCategoryHighlights : autoCategoryHighlights;
+
+const defaultFaqItems = [
   {
     q: '방콕, 파타야, 치앙마이 중 어디부터 보는 게 좋나요?',
     a: '일정이 가장 긴 지역부터 확인한 뒤, 카테고리별 상세 페이지로 이동하면 동선과 문의 흐름을 빠르게 정리할 수 있습니다.',
@@ -44,6 +54,43 @@ const faqItems = [
     a: '네. 운영 중인 채널만 우선 노출하며, 준비 중인 채널은 순차적으로 업데이트됩니다.',
   },
 ];
+
+const faqItems = homeHero.faqItems?.length
+  ? homeHero.faqItems.map((item) => ({ q: item.question, a: item.answer }))
+  : defaultFaqItems;
+
+const seoBlockTitle = homeHero.seoBlockTitle ?? '태국 지역별 KTV, 스파, 클럽, VIP 가이드 정보';
+const seoBlockParagraph1 =
+  homeHero.seoBlockParagraph1 ??
+  '메인 랜딩은 지역 페이지와 카테고리 페이지를 동시에 안내하며, 각 업체 상세 페이지는 단일 정규 URL로 연결합니다. 중복 URL을 최소화하고, title/description/canonical/내부 링크 구조를 유지해 검색엔진이 페이지 주제를 정확히 이해하도록 구성했습니다.';
+const seoBlockParagraph2 =
+  homeHero.seoBlockParagraph2 ??
+  '신규 등록 업체는 최신 등록 영역과 카테고리 대표 글 영역에 반영되어 탐색 경로를 단순화합니다. 이용자는 지역 → 카테고리 → 업체 상세 순서로 이동하면서 영업시간, 가격대, 문의 채널을 빠르게 확인할 수 있습니다.';
+const areaSectionTitle = homeHero.areaSectionTitle ?? '지역별 탐색';
+const areaSectionDescription =
+  homeHero.areaSectionDescription ?? '지역별 대표 글과 지역 소개를 확인하고 원하는 지역 페이지로 바로 이동할 수 있습니다.';
+const areaSectionCollapsed = homeHero.areaSectionCollapsed ?? true;
+
+const autoAreaCards = areas.map((area) => ({
+  area,
+  areaVenues: venues.filter((venue) => venue.data.area === area.slug).slice(0, 3),
+}));
+
+const configuredAreaCards = (homeHero.areaExplorerAreas ?? [])
+  .map((item) => {
+    const area = areas.find((entry) => entry.slug === item.area);
+    if (!area) return null;
+    const manualVenues = (item.venueSlugs ?? [])
+      .map((slug) => venues.find((entry) => entry.slug === slug))
+      .filter(Boolean);
+    return {
+      area,
+      areaVenues: manualVenues.length > 0 ? manualVenues : venues.filter((venue) => venue.data.area === area.slug).slice(0, 3),
+    };
+  })
+  .filter(Boolean);
+
+const areaCards = configuredAreaCards.length > 0 ? configuredAreaCards : autoAreaCards;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -156,11 +203,24 @@ const getThumbPosition = (position) => {
     </section>
 
     <section class="area-grid reveal">
-      <h2>지역별 탐색</h2>
-      <div class="area-cards">
-        {areas.map((area) => {
-          const areaVenues = venues.filter((venue) => venue.data.area === area.slug).slice(0, 3);
-          return (
+      <div class="area-grid-head">
+        <div>
+          <h2>{areaSectionTitle}</h2>
+          <p>{areaSectionDescription}</p>
+        </div>
+        <button
+          type="button"
+          class="area-grid-toggle"
+          data-area-toggle
+          aria-expanded={areaSectionCollapsed ? 'false' : 'true'}
+          aria-controls="area-grid-content"
+        >
+          <span>{areaSectionCollapsed ? '펼치기' : '접기'}</span>
+        </button>
+      </div>
+      <div class="area-grid-content" id="area-grid-content" data-area-content hidden={areaSectionCollapsed}>
+        <div class="area-cards">
+          {areaCards.map(({ area, areaVenues }) => (
             <article class="area-card">
               <h3>{area.data.name}</h3>
               <p>{area.data.intro}</p>
@@ -171,8 +231,8 @@ const getThumbPosition = (position) => {
                 ))}
               </div>
             </article>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </section>
 
@@ -201,15 +261,9 @@ const getThumbPosition = (position) => {
     </section>
 
     <section class="seo-copy reveal">
-      <h2>태국 지역별 KTV, 스파, 클럽, VIP 가이드 정보</h2>
-      <p>
-        메인 랜딩은 지역 페이지와 카테고리 페이지를 동시에 안내하며, 각 업체 상세 페이지는 단일 정규 URL로 연결합니다.
-        중복 URL을 최소화하고, title/description/canonical/내부 링크 구조를 유지해 검색엔진이 페이지 주제를 정확히 이해하도록 구성했습니다.
-      </p>
-      <p>
-        신규 등록 업체는 최신 등록 영역과 카테고리 대표 글 영역에 반영되어 탐색 경로를 단순화합니다.
-        이용자는 지역 → 카테고리 → 업체 상세 순서로 이동하면서 영업시간, 가격대, 문의 채널을 빠르게 확인할 수 있습니다.
-      </p>
+      <h2>{seoBlockTitle}</h2>
+      <p>{seoBlockParagraph1}</p>
+      <p>{seoBlockParagraph2}</p>
     </section>
 
     <section class="faq reveal">
@@ -250,6 +304,22 @@ const getThumbPosition = (position) => {
     postMoreButton?.addEventListener('click', () => {
       visiblePostCount = Math.min(visiblePostCount + postBatchSize, postItems.length);
       updatePosts();
+    });
+
+    const areaToggleButton = document.querySelector('[data-area-toggle]');
+    const areaContent = document.querySelector('[data-area-content]');
+    const updateAreaToggleText = (isExpanded) => {
+      const label = areaToggleButton?.querySelector('span');
+      if (label) label.textContent = isExpanded ? '접기' : '펼치기';
+    };
+
+    areaToggleButton?.addEventListener('click', () => {
+      if (!areaContent) return;
+      const isExpanded = areaToggleButton.getAttribute('aria-expanded') === 'true';
+      const nextExpanded = !isExpanded;
+      areaToggleButton.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+      areaContent.hidden = !nextExpanded;
+      updateAreaToggleText(nextExpanded);
     });
 
     const reveals = document.querySelectorAll('.reveal');
@@ -534,13 +604,48 @@ const getThumbPosition = (position) => {
   }
 
   .quick-links h2,
-  .area-grid h2,
   .category-showcase h2,
   .seo-copy h2,
   .faq h2 {
     margin: 0 0 12px;
     font-size: 1.4rem;
     color: #ffe600;
+  }
+
+  .area-grid-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .area-grid h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #ffe600;
+  }
+
+  .area-grid-head p {
+    margin: 8px 0 0;
+    color: #d3d9e8;
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+
+  .area-grid-toggle {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f5f8ff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .area-grid-content {
+    margin-top: 14px;
   }
 
   .chip-grid {
@@ -692,6 +797,15 @@ const getThumbPosition = (position) => {
 
     .post-card img {
       height: 170px;
+    }
+
+    .area-grid-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .area-grid-toggle {
+      width: 100%;
     }
   }
 </style>
