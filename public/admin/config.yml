@@ -1,0 +1,49 @@
+﻿backend:
+  name: github
+  repo: cowlcjstk-rgb/thai-bam
+  branch: main
+
+media_folder: "public/uploads"
+public_folder: "/uploads"
+publish_mode: editorial_workflow
+
+slug:
+  encoding: "ascii"
+  clean_accents: true
+  sanitize_replacement: "-"
+
+collections:
+  - name: "venues"
+    label: "업체 관리"
+    folder: "src/content/venues"
+    create: true
+    slug: "{{fields.slug}}"
+    summary: "{{title}} - {{area}} / {{category}}"
+    fields:
+      - { label: "업체명", name: "title", widget: "string" }
+      - { label: "URL 슬러그", name: "slug", widget: "string" }
+      - { label: "지역", name: "area", widget: "string" }
+      - { label: "카테고리", name: "category", widget: "string" }
+      - { label: "짧은 소개", name: "shortDescription", widget: "text" }
+      - { label: "SEO 제목", name: "seoTitle", widget: "string" }
+      - { label: "SEO 설명", name: "seoDescription", widget: "text" }
+      - { label: "대표 이미지", name: "thumbnail", widget: "image" }
+      - { label: "대표 이미지 ALT", name: "thumbnailAlt", widget: "string" }
+      - { label: "노출 여부", name: "visible", widget: "boolean", default: true }
+      - { label: "정렬 순서", name: "order", widget: "number", default: 100 }
+      - { label: "수정일", name: "updatedAt", widget: "datetime" }
+      - { label: "상세 본문", name: "body", widget: "markdown" }
+
+  - name: "banners"
+    label: "광고 배너 관리"
+    folder: "src/content/banners"
+    create: true
+    slug: "{{fields.position}}-{{fields.title}}"
+    fields:
+      - { label: "배너명", name: "title", widget: "string" }
+      - { label: "노출 위치", name: "position", widget: "string" }
+      - { label: "배너 이미지", name: "image", widget: "image" }
+      - { label: "이미지 ALT", name: "imageAlt", widget: "string" }
+      - { label: "클릭 링크", name: "linkUrl", widget: "string" }
+      - { label: "노출 여부", name: "visible", widget: "boolean", default: true }
+      - { label: "정렬 순서", name: "order", widget: "number", default: 100 }
