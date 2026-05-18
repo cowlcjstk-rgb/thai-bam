@@ -2,7 +2,7 @@
   name: github
   repo: cowlcjstk-rgb/thai-bam
   branch: main
-  base_url: https://thai-bam.mkmdtkvypy.workers.dev
+  base_url: https://thai-bam.pages.dev
   auth_endpoint: oauth
   commit_messages:
     create: "cms(create): {{collection}} {{slug}}"
@@ -11,8 +11,8 @@
     uploadMedia: "cms(media): upload {{path}}"
     deleteMedia: "cms(media): delete {{path}}"
 
-site_url: https://thai-bam.mkmdtkvypy.workers.dev
-display_url: https://thai-bam.mkmdtkvypy.workers.dev
+site_url: https://thai-bam.pages.dev
+display_url: https://thai-bam.pages.dev
 locale: ko
 media_folder: "public/uploads"
 public_folder: "/uploads"
