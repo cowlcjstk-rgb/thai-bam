@@ -1,13 +1,15 @@
----
+﻿---
 import { getCollection } from 'astro:content';
 
-const [areasRaw, categoriesRaw] = await Promise.all([
+const [areasRaw, categoriesRaw, venuesRaw] = await Promise.all([
   getCollection('areas'),
   getCollection('categories'),
+  getCollection('venues'),
 ]);
 
 const areas = areasRaw.sort((a, b) => a.data.order - b.data.order);
 const categories = categoriesRaw.sort((a, b) => a.data.order - b.data.order);
+const visibleVenues = venuesRaw.filter((venue) => venue.data.visible);
 
 const normalizePath = (value) => {
   if (!value) return '/';
@@ -17,21 +19,48 @@ const normalizePath = (value) => {
 const pathname = normalizePath(Astro.url.pathname);
 
 const isExactActive = (href) => pathname === normalizePath(href);
-const isPrefixActive = (href) => pathname.startsWith(normalizePath(href));
-const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
+const isCategoryActive = (areaSlug, categorySlug) => pathname.startsWith(`/${areaSlug}/${categorySlug}/`);
+
+const currentAreaSlug = areas.find((area) => pathname.startsWith(`/${area.slug}/`))?.slug;
+const defaultAreaSlug = currentAreaSlug ?? areas[0]?.slug ?? '';
+
+const areaCategoryMap = areas.reduce((acc, area) => {
+  const availableCategorySlugs = new Set(
+    visibleVenues.filter((venue) => venue.data.area === area.slug).map((venue) => venue.data.category),
+  );
+
+  acc[area.slug] = categories.filter((category) => availableCategorySlugs.has(category.slug));
+  return acc;
+}, {});
 ---
 
 <nav class="site-menu-tabs" data-site-menu-tabs aria-label="사이트 메뉴">
-  <div class="menu-group">
+  <div class="menu-group menu-home-area">
     <a class:list={{ active: isExactActive('/') }} href="/">홈</a>
     {areas.map((area) => (
-      <a class:list={{ active: isPrefixActive(`/${area.slug}/`) }} href={`/${area.slug}/`}>{area.data.name}</a>
+      <button
+        type="button"
+        class:list={{ active: area.slug === defaultAreaSlug }}
+        data-area-trigger={area.slug}
+        aria-pressed={area.slug === defaultAreaSlug ? 'true' : 'false'}
+      >
+        {area.data.name}
+      </button>
     ))}
   </div>
 
-  <div class="menu-group menu-category">
-    {categories.map((category) => (
-      <a class:list={{ active: isCategoryActive(category.slug) }} href={`/${category.slug}/`}>{category.data.name}</a>
+  <div class="menu-group menu-category" data-area-panels>
+    {areas.map((area) => (
+      <div class="category-panel" data-area-panel={area.slug} hidden={area.slug !== defaultAreaSlug}>
+        {areaCategoryMap[area.slug].map((category) => (
+          <a
+            class:list={{ active: isCategoryActive(area.slug, category.slug) }}
+            href={`/${area.slug}/${category.slug}/`}
+          >
+            {category.data.name}
+          </a>
+        ))}
+      </div>
     ))}
   </div>
 </nav>
@@ -39,8 +68,26 @@ const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
 <script type="module">
   const menuTabs = document.querySelector('[data-site-menu-tabs]');
   const root = document.documentElement;
+  const areaButtons = Array.from(document.querySelectorAll('[data-area-trigger]'));
+  const areaPanels = Array.from(document.querySelectorAll('[data-area-panel]'));
 
   if (menuTabs) {
+    const activateArea = (areaSlug) => {
+      areaButtons.forEach((button) => {
+        const isActive = button.dataset.areaTrigger === areaSlug;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      areaPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.areaPanel !== areaSlug;
+      });
+    };
+
+    areaButtons.forEach((button) => {
+      button.addEventListener('click', () => activateArea(button.dataset.areaTrigger));
+    });
+
     const updateMenuTabHeight = () => {
       const height = Math.ceil(menuTabs.getBoundingClientRect().height);
       root.style.setProperty('--site-menu-tabs-height', `${height}px`);
@@ -82,7 +129,8 @@ const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
     display: none;
   }
 
-  .menu-group a {
+  .menu-group a,
+  .menu-group button {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -98,10 +146,30 @@ const isCategoryActive = (slug) => pathname.includes(`/${slug}/`);
     white-space: nowrap;
   }
 
-  .menu-group a.active {
+  .menu-group button {
+    cursor: pointer;
+  }
+
+  .menu-group a.active,
+  .menu-group button.active {
     border-color: rgba(255, 52, 174, 0.86);
     background: rgba(255, 52, 174, 0.2);
     color: #ffffff;
+  }
+
+  .menu-category {
+    overflow: hidden;
+  }
+
+  .category-panel {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .category-panel::-webkit-scrollbar {
+    display: none;
   }
 
   .menu-category a.active {
