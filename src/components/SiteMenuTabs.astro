@@ -17,12 +17,10 @@ const normalizePath = (value) => {
 };
 
 const pathname = normalizePath(Astro.url.pathname);
+const currentAreaSlug = areas.find((area) => pathname.startsWith(`/${area.slug}/`))?.slug ?? '';
 
 const isExactActive = (href) => pathname === normalizePath(href);
 const isCategoryActive = (areaSlug, categorySlug) => pathname.startsWith(`/${areaSlug}/${categorySlug}/`);
-
-const currentAreaSlug = areas.find((area) => pathname.startsWith(`/${area.slug}/`))?.slug;
-const defaultAreaSlug = currentAreaSlug ?? '';
 
 const areaCategoryMap = areas.reduce((acc, area) => {
   const availableCategorySlugs = new Set(
@@ -34,80 +32,123 @@ const areaCategoryMap = areas.reduce((acc, area) => {
 }, {});
 ---
 
-<nav class="site-menu-tabs" data-site-menu-tabs aria-label="사이트 메뉴">
-  <div class="menu-group menu-home-area">
-    <a class:list={{ active: isExactActive('/') }} href="/">홈</a>
-    {areas.map((area) => (
-      <button
-        type="button"
-        class:list={{ active: area.slug === defaultAreaSlug }}
-        data-area-trigger={area.slug}
-        aria-pressed={area.slug === defaultAreaSlug ? 'true' : 'false'}
-      >
-        {area.data.name}
-      </button>
-    ))}
+<nav class="site-menu-tabs" data-site-menu-tabs data-current-area={currentAreaSlug} aria-label="사이트 메뉴">
+  <div class="menu-top-row">
+    <button type="button" class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="site-menu-panel">
+      메뉴
+    </button>
   </div>
 
-  <div class="menu-category" data-area-panels hidden={!defaultAreaSlug}>
-    {areas.map((area) => (
-      <ul class="category-panel" data-area-panel={area.slug} hidden={area.slug !== defaultAreaSlug}>
-        {areaCategoryMap[area.slug].map((category) => (
-          <li>
-            <a
-              class:list={{ active: isCategoryActive(area.slug, category.slug) }}
-              href={`/${area.slug}/${category.slug}/`}
-            >
-              {category.data.name}
-            </a>
-          </li>
-        ))}
-      </ul>
-    ))}
+  <div class="menu-panel" id="site-menu-panel" data-menu-panel hidden>
+    <div class="menu-section-title">지역 선택</div>
+    <div class="menu-region-list" data-region-list>
+      <a class:list={{ active: isExactActive('/') }} href="/">홈</a>
+      {areas.map((area) => (
+        <button
+          type="button"
+          data-area-trigger={area.slug}
+          data-area-name={area.data.name}
+          class:list={{ active: area.slug === currentAreaSlug }}
+          aria-pressed={area.slug === currentAreaSlug ? 'true' : 'false'}
+        >
+          {area.data.name}
+        </button>
+      ))}
+    </div>
+
+    <div class="menu-category-wrap" data-category-wrap hidden>
+      <p class="menu-section-title" data-category-title>카테고리 선택</p>
+      {areas.map((area) => (
+        <ul class="category-panel" data-area-panel={area.slug} hidden>
+          {areaCategoryMap[area.slug].map((category) => (
+            <li>
+              <a class:list={{ active: isCategoryActive(area.slug, category.slug) }} href={`/${area.slug}/${category.slug}/`}>
+                {category.data.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
   </div>
 </nav>
 
 <script type="module">
   const menuTabs = document.querySelector('[data-site-menu-tabs]');
+  if (!menuTabs) {
+    return;
+  }
+
   const root = document.documentElement;
-  const areaButtons = Array.from(document.querySelectorAll('[data-area-trigger]'));
-  const areaPanels = Array.from(document.querySelectorAll('[data-area-panel]'));
+  const menuToggle = menuTabs.querySelector('[data-menu-toggle]');
+  const menuPanel = menuTabs.querySelector('[data-menu-panel]');
+  const categoryWrap = menuTabs.querySelector('[data-category-wrap]');
+  const categoryTitle = menuTabs.querySelector('[data-category-title]');
+  const areaButtons = Array.from(menuTabs.querySelectorAll('[data-area-trigger]'));
+  const areaPanels = Array.from(menuTabs.querySelectorAll('[data-area-panel]'));
 
-  if (menuTabs) {
-    const categoryPanels = menuTabs.querySelector('[data-area-panels]');
+  const setMenuOpen = (isOpen) => {
+    menuToggle?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (menuPanel) {
+      menuPanel.hidden = !isOpen;
+    }
+    updateMenuTabHeight();
+  };
 
-    const activateArea = (areaSlug) => {
-      areaButtons.forEach((button) => {
-        const isActive = button.dataset.areaTrigger === areaSlug;
-        button.classList.toggle('active', isActive);
-        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      });
-
-      if (categoryPanels) {
-        categoryPanels.hidden = !areaSlug;
-      }
-
-      areaPanels.forEach((panel) => {
-        panel.hidden = panel.dataset.areaPanel !== areaSlug;
-      });
-    };
-
+  const activateArea = (areaSlug, areaName) => {
     areaButtons.forEach((button) => {
-      button.addEventListener('click', () => activateArea(button.dataset.areaTrigger));
+      const isActive = button.dataset.areaTrigger === areaSlug;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
-    const updateMenuTabHeight = () => {
-      const height = Math.ceil(menuTabs.getBoundingClientRect().height);
-      root.style.setProperty('--site-menu-tabs-height', `${height}px`);
-    };
+    areaPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.areaPanel !== areaSlug;
+    });
+
+    if (categoryWrap) {
+      categoryWrap.hidden = !areaSlug;
+    }
+
+    if (categoryTitle) {
+      categoryTitle.textContent = areaSlug ? `${areaName} 카테고리` : '카테고리 선택';
+    }
 
     updateMenuTabHeight();
-    window.addEventListener('resize', updateMenuTabHeight, { passive: true });
+  };
 
-    if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(updateMenuTabHeight);
-      observer.observe(menuTabs);
+  const updateMenuTabHeight = () => {
+    const height = Math.ceil(menuTabs.getBoundingClientRect().height);
+    root.style.setProperty('--site-menu-tabs-height', `${height}px`);
+  };
+
+  menuToggle?.addEventListener('click', () => {
+    const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+    setMenuOpen(!isOpen);
+  });
+
+  areaButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const slug = button.dataset.areaTrigger ?? '';
+      const name = button.dataset.areaName ?? '';
+      activateArea(slug, name);
+    });
+  });
+
+  const currentAreaSlug = menuTabs.dataset.currentArea ?? '';
+  if (currentAreaSlug) {
+    const initial = areaButtons.find((button) => button.dataset.areaTrigger === currentAreaSlug);
+    if (initial) {
+      activateArea(initial.dataset.areaTrigger ?? '', initial.dataset.areaName ?? '');
     }
+  }
+
+  updateMenuTabHeight();
+  window.addEventListener('resize', updateMenuTabHeight, { passive: true });
+
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(updateMenuTabHeight);
+    observer.observe(menuTabs);
   }
 </script>
 
@@ -126,47 +167,71 @@ const areaCategoryMap = areas.reduce((acc, area) => {
     gap: 8px;
   }
 
-  .menu-group {
+  .menu-top-row {
     display: flex;
+    justify-content: flex-end;
+  }
+
+  .menu-toggle {
+    min-height: 38px;
+    min-width: 76px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f2f6ff;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+
+  .menu-panel {
+    display: grid;
+    gap: 10px;
+    padding: 6px 2px 2px;
+  }
+
+  .menu-section-title {
+    margin: 0;
+    color: #f2f6ff;
+    font-size: 0.86rem;
+    opacity: 0.78;
+  }
+
+  .menu-region-list {
+    display: grid;
     gap: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
   }
 
-  .menu-group::-webkit-scrollbar {
-    display: none;
-  }
-
-  .menu-group a,
-  .menu-group button {
-    flex: 0 0 auto;
+  .menu-region-list a,
+  .menu-region-list button,
+  .category-panel a {
+    width: 100%;
+    min-height: 40px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-height: 36px;
-    padding: 0 12px;
-    border-radius: 999px;
+    justify-content: flex-start;
+    padding: 0 14px;
+    border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     color: #f2f6ff;
     text-decoration: none;
     background: rgba(255, 255, 255, 0.04);
-    font-size: 0.9rem;
-    white-space: nowrap;
+    font-size: 1rem;
   }
 
-  .menu-group button {
+  .menu-region-list button {
     cursor: pointer;
   }
 
-  .menu-group a.active,
-  .menu-group button.active {
+  .menu-region-list a.active,
+  .menu-region-list button.active {
     border-color: rgba(255, 52, 174, 0.86);
     background: rgba(255, 52, 174, 0.2);
     color: #ffffff;
   }
 
-  .menu-category {
-    overflow: hidden;
+  .menu-category-wrap {
+    display: grid;
+    gap: 8px;
   }
 
   .category-panel {
@@ -177,20 +242,16 @@ const areaCategoryMap = areas.reduce((acc, area) => {
     gap: 6px;
   }
 
+  .category-panel[hidden] {
+    display: none;
+  }
+
   .category-panel li {
     margin: 0;
     padding: 0;
   }
 
-  .category-panel a {
-    width: 100%;
-    min-height: 40px;
-    justify-content: flex-start;
-    padding: 0 14px;
-    border-radius: 10px;
-  }
-
-  .menu-category a.active {
+  .category-panel a.active {
     border-color: rgba(34, 244, 255, 0.8);
     background: rgba(34, 244, 255, 0.16);
   }
