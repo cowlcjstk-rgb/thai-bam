@@ -19,7 +19,6 @@ const normalizePath = (value) => {
 const pathname = normalizePath(Astro.url.pathname);
 const currentAreaSlug = areas.find((area) => pathname.startsWith(`/${area.slug}/`))?.slug ?? '';
 
-const isExactActive = (href) => pathname === normalizePath(href);
 const isCategoryActive = (areaSlug, categorySlug) => pathname.startsWith(`/${areaSlug}/${categorySlug}/`);
 
 const areaCategoryMap = areas.reduce((acc, area) => {
@@ -35,15 +34,17 @@ const areaCategoryMap = areas.reduce((acc, area) => {
 <nav class="site-menu-tabs" data-site-menu-tabs data-current-area={currentAreaSlug} aria-label="사이트 메뉴">
   <div class="menu-top-row">
     <p class="menu-heading">태국 밤문화 인사이드</p>
-    <button type="button" class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="site-menu-panel">
-      메뉴
-    </button>
+    <div class="menu-actions">
+      <a class="home-emoji-button" href="/" aria-label="홈으로 이동">🏠</a>
+      <button type="button" class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="site-menu-panel">
+        메뉴
+      </button>
+    </div>
   </div>
 
   <div class="menu-panel" id="site-menu-panel" data-menu-panel hidden>
     <div class="menu-section-title">지역 선택</div>
     <div class="menu-region-list" data-region-list>
-      <a class:list={{ active: isExactActive('/') }} href="/">홈</a>
       {areas.map((area) => (
         <button
           type="button"
@@ -175,12 +176,33 @@ const areaCategoryMap = areas.reduce((acc, area) => {
     gap: 12px;
   }
 
+  .menu-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .home-emoji-button {
+    min-height: 38px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.08);
+    text-decoration: none;
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
   .menu-heading {
     margin: 0;
-    color: #f2f6ff;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    color: #f8fbff;
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 0 16px rgba(255, 72, 181, 0.2);
   }
 
   .menu-toggle {
