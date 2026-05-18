@@ -22,7 +22,7 @@ const isExactActive = (href) => pathname === normalizePath(href);
 const isCategoryActive = (areaSlug, categorySlug) => pathname.startsWith(`/${areaSlug}/${categorySlug}/`);
 
 const currentAreaSlug = areas.find((area) => pathname.startsWith(`/${area.slug}/`))?.slug;
-const defaultAreaSlug = currentAreaSlug ?? areas[0]?.slug ?? '';
+const defaultAreaSlug = currentAreaSlug ?? '';
 
 const areaCategoryMap = areas.reduce((acc, area) => {
   const availableCategorySlugs = new Set(
@@ -49,7 +49,7 @@ const areaCategoryMap = areas.reduce((acc, area) => {
     ))}
   </div>
 
-  <div class="menu-category" data-area-panels>
+  <div class="menu-category" data-area-panels hidden={!defaultAreaSlug}>
     {areas.map((area) => (
       <ul class="category-panel" data-area-panel={area.slug} hidden={area.slug !== defaultAreaSlug}>
         {areaCategoryMap[area.slug].map((category) => (
@@ -74,12 +74,18 @@ const areaCategoryMap = areas.reduce((acc, area) => {
   const areaPanels = Array.from(document.querySelectorAll('[data-area-panel]'));
 
   if (menuTabs) {
+    const categoryPanels = menuTabs.querySelector('[data-area-panels]');
+
     const activateArea = (areaSlug) => {
       areaButtons.forEach((button) => {
         const isActive = button.dataset.areaTrigger === areaSlug;
         button.classList.toggle('active', isActive);
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
+
+      if (categoryPanels) {
+        categoryPanels.hidden = !areaSlug;
+      }
 
       areaPanels.forEach((panel) => {
         panel.hidden = panel.dataset.areaPanel !== areaSlug;
