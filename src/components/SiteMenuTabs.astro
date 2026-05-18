@@ -34,6 +34,7 @@ const areaCategoryMap = areas.reduce((acc, area) => {
 
 <nav class="site-menu-tabs" data-site-menu-tabs data-current-area={currentAreaSlug} aria-label="사이트 메뉴">
   <div class="menu-top-row">
+    <p class="menu-heading">태국 밤문화 인사이드</p>
     <button type="button" class="menu-toggle" data-menu-toggle aria-expanded="false" aria-controls="site-menu-panel">
       메뉴
     </button>
@@ -75,82 +76,80 @@ const areaCategoryMap = areas.reduce((acc, area) => {
 
 <script type="module">
   const menuTabs = document.querySelector('[data-site-menu-tabs]');
-  if (!menuTabs) {
-    return;
-  }
+  if (menuTabs) {
+    const root = document.documentElement;
+    const menuToggle = menuTabs.querySelector('[data-menu-toggle]');
+    const menuPanel = menuTabs.querySelector('[data-menu-panel]');
+    const categoryWrap = menuTabs.querySelector('[data-category-wrap]');
+    const categoryTitle = menuTabs.querySelector('[data-category-title]');
+    const areaButtons = Array.from(menuTabs.querySelectorAll('[data-area-trigger]'));
+    const areaPanels = Array.from(menuTabs.querySelectorAll('[data-area-panel]'));
 
-  const root = document.documentElement;
-  const menuToggle = menuTabs.querySelector('[data-menu-toggle]');
-  const menuPanel = menuTabs.querySelector('[data-menu-panel]');
-  const categoryWrap = menuTabs.querySelector('[data-category-wrap]');
-  const categoryTitle = menuTabs.querySelector('[data-category-title]');
-  const areaButtons = Array.from(menuTabs.querySelectorAll('[data-area-trigger]'));
-  const areaPanels = Array.from(menuTabs.querySelectorAll('[data-area-panel]'));
+    const setMenuOpen = (isOpen) => {
+      menuToggle?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (menuPanel) {
+        menuPanel.hidden = !isOpen;
+      }
+      updateMenuTabHeight();
+    };
 
-  const setMenuOpen = (isOpen) => {
-    menuToggle?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    if (menuPanel) {
-      menuPanel.hidden = !isOpen;
-    }
-    updateMenuTabHeight();
-  };
+    const activateArea = (areaSlug, areaName) => {
+      const selectedPanel = areaPanels.find((panel) => panel.dataset.areaPanel === areaSlug);
 
-  const activateArea = (areaSlug, areaName) => {
-    const selectedPanel = areaPanels.find((panel) => panel.dataset.areaPanel === areaSlug);
+      areaButtons.forEach((button) => {
+        const isActive = button.dataset.areaTrigger === areaSlug;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      areaPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.areaPanel !== areaSlug;
+      });
+
+      if (categoryWrap) {
+        categoryWrap.hidden = !areaSlug || !selectedPanel;
+      }
+
+      if (categoryTitle) {
+        categoryTitle.textContent = areaSlug ? `${areaName} 카테고리` : '카테고리 선택';
+      }
+
+      updateMenuTabHeight();
+    };
+
+    const updateMenuTabHeight = () => {
+      const height = Math.ceil(menuTabs.getBoundingClientRect().height);
+      root.style.setProperty('--site-menu-tabs-height', `${height}px`);
+    };
+
+    menuToggle?.addEventListener('click', () => {
+      const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+      setMenuOpen(!isOpen);
+    });
 
     areaButtons.forEach((button) => {
-      const isActive = button.dataset.areaTrigger === areaSlug;
-      button.classList.toggle('active', isActive);
-      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.addEventListener('click', () => {
+        const slug = button.dataset.areaTrigger ?? '';
+        const name = button.dataset.areaName ?? '';
+        activateArea(slug, name);
+      });
     });
 
-    areaPanels.forEach((panel) => {
-      panel.hidden = panel.dataset.areaPanel !== areaSlug;
-    });
-
-    if (categoryWrap) {
-      categoryWrap.hidden = !areaSlug || !selectedPanel;
-    }
-
-    if (categoryTitle) {
-      categoryTitle.textContent = areaSlug ? `${areaName} 카테고리` : '카테고리 선택';
+    const currentAreaSlug = menuTabs.dataset.currentArea ?? '';
+    if (currentAreaSlug) {
+      const initial = areaButtons.find((button) => button.dataset.areaTrigger === currentAreaSlug);
+      if (initial) {
+        activateArea(initial.dataset.areaTrigger ?? '', initial.dataset.areaName ?? '');
+      }
     }
 
     updateMenuTabHeight();
-  };
+    window.addEventListener('resize', updateMenuTabHeight, { passive: true });
 
-  const updateMenuTabHeight = () => {
-    const height = Math.ceil(menuTabs.getBoundingClientRect().height);
-    root.style.setProperty('--site-menu-tabs-height', `${height}px`);
-  };
-
-  menuToggle?.addEventListener('click', () => {
-    const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
-    setMenuOpen(!isOpen);
-  });
-
-  areaButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const slug = button.dataset.areaTrigger ?? '';
-      const name = button.dataset.areaName ?? '';
-      activateArea(slug, name);
-    });
-  });
-
-  const currentAreaSlug = menuTabs.dataset.currentArea ?? '';
-  if (currentAreaSlug) {
-    const initial = areaButtons.find((button) => button.dataset.areaTrigger === currentAreaSlug);
-    if (initial) {
-      activateArea(initial.dataset.areaTrigger ?? '', initial.dataset.areaName ?? '');
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateMenuTabHeight);
+      observer.observe(menuTabs);
     }
-  }
-
-  updateMenuTabHeight();
-  window.addEventListener('resize', updateMenuTabHeight, { passive: true });
-
-  if (typeof ResizeObserver !== 'undefined') {
-    const observer = new ResizeObserver(updateMenuTabHeight);
-    observer.observe(menuTabs);
   }
 </script>
 
@@ -171,7 +170,17 @@ const areaCategoryMap = areas.reduce((acc, area) => {
 
   .menu-top-row {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .menu-heading {
+    margin: 0;
+    color: #f2f6ff;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .menu-toggle {
