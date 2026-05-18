@@ -1,7 +1,24 @@
 ---
 heroKicker: THAILAND NIGHT GUIDE
-heroTitle: 방콕 · 파타야 · 치앙마이 프리미엄 나이트라이프 가이드
-heroDescription: Thai Bam은 태국 주요 지역의 KTV, 스파, 클럽 예약, VIP 가이드 정보를 정적 페이지로 정리한 디렉토리입니다. 지역 페이지, 카테고리 페이지, 업체 상세 페이지를 내부 링크로 연결해 빠른 탐색과 문의 전환에 최적화했습니다.
+heroTitle: 태국 KTV · 마사지· 클럽 가이드
+heroDescription: |-
+  태국의 진짜 밤은 늦게 시작됩니다.
+  Thai Bam은 방콕, 파타야, 치앙마이의 KTV, 클럽, 스파, 라운지 등 
+  현지에서 많이 찾는 업소 분위기, 예약 문의, VIP 가이드 정보까지 한곳에서 확인할 수 있습니다.
+
+  낮보다 화려한 태국의 밤,
+  Thai Bam에서 시작하세요.
+areaSectionTitle: 지역별 탐색
+areaSectionDescription: 지역별 대표 글과 지역 소개를 확인하고 원하는 지역 페이지로 바로 이동할 수 있습니다.
+areaSectionCollapsed: true
+seoBlockTitle: 태국 지역별 KTV, 스파, 클럽, VIP 가이드 정보
+seoBlockParagraph1: Thai Bam은 방콕, 파타야, 치앙마이의 KTV, 스파, 클럽, 라운지 정보를 안내하는 프리미엄 나이트라이프 가이드입니다.
+seoBlockParagraph2: |-
+  지역별 추천 업소와 기본 정보를 빠르게 확인할 수 있으며,
+  카카오톡 · LINE · 텔레그램 상담을 통해 예약, 가격, 추천 코스 등 보다 자세한 현지 안내를 받을 수 있습니다.
+
+  원하는 분위기와 스타일에 맞춰
+  가장 적합한 태국 밤문화를 연결해드립니다.
 categoryHighlights:
   - category: ktv-karaoke
     venueSlug: bangkok-karaoke-one
@@ -11,12 +28,6 @@ categoryHighlights:
     venueSlug: bangkok-night-reserve
   - category: vip-guide
     venueSlug: chiang-mai-vip-guide-plus
-seoBlockTitle: 태국 지역별 KTV, 스파, 클럽, VIP 가이드 정보
-seoBlockParagraph1: 메인 랜딩은 지역 페이지와 카테고리 페이지를 동시에 안내하며, 각 업체 상세 페이지는 단일 정규 URL로 연결합니다. 중복 URL을 최소화하고, title/description/canonical/내부 링크 구조를 유지해 검색엔진이 페이지 주제를 정확히 이해하도록 구성했습니다.
-seoBlockParagraph2: 신규 등록 업체는 최신 등록 영역과 카테고리 대표 글 영역에 반영되어 탐색 경로를 단순화합니다. 이용자는 지역 → 카테고리 → 업체 상세 순서로 이동하면서 영업시간, 가격대, 문의 채널을 빠르게 확인할 수 있습니다.
-areaSectionTitle: 지역별 탐색
-areaSectionDescription: 지역별 대표 글과 지역 소개를 확인하고 원하는 지역 페이지로 바로 이동할 수 있습니다.
-areaSectionCollapsed: true
 areaExplorerAreas:
   - area: bangkok
     venueSlugs:
