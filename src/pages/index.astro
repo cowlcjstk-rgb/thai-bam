@@ -18,6 +18,9 @@ const defaultHero = {
 const resolveVenueSlug = (entry) => entry.data.slug?.trim() || entry.slug;
 
 const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?? homeEntries[0]?.data ?? defaultHero;
+const heroDescriptionParts = (homeHero.heroDescription ?? '').split(/(?<=[.!?])\s+/).filter(Boolean);
+const heroDescriptionLead = heroDescriptionParts[0] ?? '';
+const heroDescriptionBody = heroDescriptionParts.slice(1).join(' ');
 const POST_INITIAL_COUNT = 5;
 const POST_BATCH_SIZE = 5;
 
@@ -121,7 +124,11 @@ const getThumbPosition = (position) => {
     <section class="home-hero reveal">
       <p class="hero-kicker">{homeHero.heroKicker}</p>
       <h1>{homeHero.heroTitle}</h1>
-      <p class="hero-copy">{homeHero.heroDescription}</p>
+      <p class="hero-copy">
+        {heroDescriptionLead && <strong>{heroDescriptionLead}</strong>}
+        {heroDescriptionBody && <span>{heroDescriptionBody}</span>}
+        {!heroDescriptionLead && homeHero.heroDescription}
+      </p>
 
       <div class="hero-actions">
         <a href="/bangkok/">방콕 보기</a>
@@ -418,6 +425,20 @@ const getThumbPosition = (position) => {
     line-height: 1.72;
     font-size: 1rem;
     color: #e6e9f2;
+    display: grid;
+    gap: 8px;
+    text-wrap: pretty;
+  }
+
+  .hero-copy strong {
+    color: #f6fbff;
+    font-size: 1.06em;
+    line-height: 1.5;
+    font-weight: 700;
+  }
+
+  .hero-copy span {
+    color: #d8deed;
   }
 
   .hero-actions {
@@ -790,6 +811,17 @@ const getThumbPosition = (position) => {
 
     .home-hero {
       padding: 16px;
+    }
+
+    .hero-copy {
+      margin-top: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+      line-height: 1.58;
+      font-size: 0.95rem;
+      gap: 6px;
     }
 
     .post-feed-head h2 {
