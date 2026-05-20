@@ -8,6 +8,7 @@ heroDescription: |-
 
   낮보다 화려한 태국의 밤,
   Thai Bam에서 시작하세요.
+heroDescriptionImage: /uploads/00-momo-25-1024x683-1-.jpg
 areaSectionTitle: 지역별 탐색
 areaSectionDescription: 지역별 대표 글과 지역 소개를 확인하고 원하는 지역 페이지로 바로 이동할 수 있습니다.
 areaSectionCollapsed: true
