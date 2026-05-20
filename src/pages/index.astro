@@ -1,6 +1,7 @@
 ﻿---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import BannerSlot from '../components/BannerSlot.astro';
+import ContactInquiryBanner from '../components/ContactInquiryBanner.astro';
 import JsonLd from '../components/JsonLd.astro';
 import { getCollection } from 'astro:content';
 
@@ -318,6 +319,10 @@ const getThumbPosition = (position) => {
         ))}
       </div>
     </section>
+
+    <div class="reveal">
+      <ContactInquiryBanner />
+    </div>
   </div>
 
   <script type="module">
