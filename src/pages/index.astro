@@ -173,6 +173,12 @@ const getThumbPosition = (position) => {
             </div>
           </a>
         ))}
+        {heroVenues.length > 1 && (
+          <div class="hero-slider-controls" aria-label="추천 게시물 슬라이드 제어">
+            <button type="button" class="hero-slider-button" data-hero-prev aria-label="이전 게시물">이전</button>
+            <button type="button" class="hero-slider-button" data-hero-next aria-label="다음 게시물">다음</button>
+          </div>
+        )}
       </div>
     </section>
 
@@ -266,7 +272,10 @@ const getThumbPosition = (position) => {
 
   <script type="module">
     const heroSlides = Array.from(document.querySelectorAll('[data-hero-slide]'));
+    const heroPrevButton = document.querySelector('[data-hero-prev]');
+    const heroNextButton = document.querySelector('[data-hero-next]');
     let heroSlideIndex = 0;
+    let heroSlideTimerId;
     const showHeroSlide = (nextIndex) => {
       heroSlides.forEach((slide, index) => {
         const isActive = index === nextIndex;
@@ -275,12 +284,28 @@ const getThumbPosition = (position) => {
       });
     };
 
-    if (heroSlides.length > 1) {
-      showHeroSlide(0);
-      window.setInterval(() => {
+    const restartHeroAutoplay = () => {
+      if (heroSlides.length <= 1) return;
+      if (heroSlideTimerId) window.clearInterval(heroSlideTimerId);
+      heroSlideTimerId = window.setInterval(() => {
         heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
         showHeroSlide(heroSlideIndex);
       }, 5000);
+    };
+
+    if (heroSlides.length > 1) {
+      showHeroSlide(0);
+      restartHeroAutoplay();
+      heroPrevButton?.addEventListener('click', () => {
+        heroSlideIndex = (heroSlideIndex - 1 + heroSlides.length) % heroSlides.length;
+        showHeroSlide(heroSlideIndex);
+        restartHeroAutoplay();
+      });
+      heroNextButton?.addEventListener('click', () => {
+        heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
+        showHeroSlide(heroSlideIndex);
+        restartHeroAutoplay();
+      });
     }
 
     const postItems = Array.from(document.querySelectorAll('[data-post-item]'));
@@ -528,6 +553,31 @@ const getThumbPosition = (position) => {
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
+  }
+
+  .hero-slider-controls {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 4;
+    display: inline-flex;
+    gap: 8px;
+  }
+
+  .hero-slider-button {
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    background: rgba(6, 8, 12, 0.74);
+    color: #eef4ff;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+  }
+
+  .hero-slider-button:hover {
+    border-color: #79f2ff;
   }
 
   .hero-card img {
