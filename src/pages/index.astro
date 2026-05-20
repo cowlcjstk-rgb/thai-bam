@@ -130,6 +130,17 @@ const getThumbPosition = (position) => {
           {heroDescriptionBody && <span>{heroDescriptionBody}</span>}
           {!heroDescriptionLead && homeHero.heroDescription}
         </p>
+        {homeHero.heroDescriptionImage && (
+          <figure class="hero-copy-image">
+            <img
+              src={homeHero.heroDescriptionImage}
+              alt={homeHero.heroDescriptionImageAlt ?? `${homeHero.heroTitle} 소개 이미지`}
+              width="1200"
+              height="675"
+              loading="lazy"
+            />
+          </figure>
+        )}
       </div>
 
       <div class="hero-actions">
@@ -467,6 +478,21 @@ const getThumbPosition = (position) => {
     color: #d8deed;
   }
 
+  .hero-copy-image {
+    margin: 12px 0 0;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: #090b11;
+  }
+
+  .hero-copy-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+  }
+
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
@@ -614,7 +640,7 @@ const getThumbPosition = (position) => {
     margin-top: 12px;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
   .post-more-wrap {
@@ -906,6 +932,18 @@ const getThumbPosition = (position) => {
 
     .area-grid-toggle {
       width: 100%;
+    }
+  }
+
+  @media (min-width: 700px) {
+    .post-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1080px) {
+    .post-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 </style>

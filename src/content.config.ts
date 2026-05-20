@@ -38,6 +38,8 @@ const home = defineCollection({
     heroKicker: z.string().min(3).max(80),
     heroTitle: z.string().min(10).max(150),
     heroDescription: z.string().min(40).max(500),
+    heroDescriptionImage: z.string().optional(),
+    heroDescriptionImageAlt: z.string().max(140).optional(),
     categoryHighlights: z.array(z.object({
       category: z.string(),
       venueSlug: z.string(),

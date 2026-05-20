@@ -39,6 +39,8 @@ collections:
       - { label: "1. 상단 라벨", name: heroKicker, widget: string, hint: "예: THAILAND NIGHT GUIDE" }
       - { label: "2. 메인 제목", name: heroTitle, widget: string }
       - { label: "3. 소개 문구", name: heroDescription, widget: text }
+      - { label: "3-1. 소개 문구 이미지", name: heroDescriptionImage, widget: image, required: false, hint: "문구 아래에 함께 노출할 이미지" }
+      - { label: "3-2. 소개 문구 이미지 ALT", name: heroDescriptionImageAlt, widget: string, required: false, hint: "예: 태국 나이트라이프 메인 비주얼" }
       - { label: "4. 지역별 탐색 제목", name: areaSectionTitle, widget: string, required: false }
       - { label: "5. 지역별 탐색 설명", name: areaSectionDescription, widget: text, required: false }
       - { label: "6. 지역별 탐색 기본 접기", name: areaSectionCollapsed, widget: boolean, default: true, hint: "켜면 홈 접속 시 지역별 탐색 섹션이 접힌 상태로 시작됩니다." }
