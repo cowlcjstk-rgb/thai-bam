@@ -21,7 +21,7 @@ const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?
 const heroDescriptionParts = (homeHero.heroDescription ?? '').split(/(?<=[.!?])\s+/).filter(Boolean);
 const heroDescriptionLead = heroDescriptionParts[0] ?? '';
 const heroDescriptionBody = heroDescriptionParts.slice(1).join(' ');
-const POST_INITIAL_COUNT = 5;
+const POST_INITIAL_COUNT = 6;
 const POST_BATCH_SIZE = 5;
 
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
@@ -122,18 +122,38 @@ const getThumbPosition = (position) => {
 
   <div class="home-page">
     <section class="home-hero reveal">
-      <p class="hero-kicker">{homeHero.heroKicker}</p>
-      <h1>{homeHero.heroTitle}</h1>
-      <p class="hero-copy">
-        {heroDescriptionLead && <strong>{heroDescriptionLead}</strong>}
-        {heroDescriptionBody && <span>{heroDescriptionBody}</span>}
-        {!heroDescriptionLead && homeHero.heroDescription}
-      </p>
+      <div class="hero-copy-wrap">
+        <p class="hero-kicker">{homeHero.heroKicker}</p>
+        <h1>{homeHero.heroTitle}</h1>
+        <p class="hero-copy">
+          {heroDescriptionLead && <strong>{heroDescriptionLead}</strong>}
+          {heroDescriptionBody && <span>{heroDescriptionBody}</span>}
+          {!heroDescriptionLead && homeHero.heroDescription}
+        </p>
+      </div>
 
       <div class="hero-actions">
-        <a href="/bangkok/">방콕 보기</a>
-        <a href="/pattaya/">파타야 보기</a>
-        <a href="/chiang-mai/">치앙마이 보기</a>
+        <a href="/bangkok/">방콕 바로가기</a>
+        <a href="/pattaya/">파타야 바로가기</a>
+        <a href="/chiang-mai/">치앙마이 바로가기</a>
+      </div>
+
+      <div class="hero-cta-grid">
+        <a class="hero-cta-card" href="/ktv-karaoke/">
+          <p>가장 많이 찾는 서비스</p>
+          <strong>KTV · 가라오케 보기</strong>
+          <span>대표 업체와 최신 정보 확인</span>
+        </a>
+        <a class="hero-cta-card" href="/spa-massage/">
+          <p>편안한 동선 추천</p>
+          <strong>스파 · 마사지 보기</strong>
+          <span>지역별 인기 샵 빠르게 탐색</span>
+        </a>
+        <a class="hero-cta-card" href="/club-reservation/">
+          <p>예약 중심 탐색</p>
+          <strong>클럽 예약 정보 보기</strong>
+          <span>운영시간과 안내 포인트 정리</span>
+        </a>
       </div>
 
       <BannerSlot position="home_hero" />
@@ -160,49 +180,11 @@ const getThumbPosition = (position) => {
 
     <BannerSlot position="home_top" />
 
-    <section class="section-strip reveal">
-      <h2>게시물</h2>
-    </section>
-
-    <section class="post-feed reveal">
-      <div class="post-feed-head">
-        <h2>All Posts</h2>
-        <span>{latestVenues.length} entries</span>
-      </div>
-
-      <div class="post-grid">
-        {latestVenues.map((venue, index) => (
-          <article class="post-card" data-post-item hidden={index >= POST_INITIAL_COUNT}>
-            <a href={`/venue/${resolveVenueSlug(venue)}/`}>
-              <img
-                src={venue.data.thumbnail}
-                alt={venue.data.thumbnailAlt}
-                width="1200"
-                height="700"
-                loading="lazy"
-                style={`object-position:${getThumbPosition(venue.data.thumbnailPosition)};`}
-              />
-              <div class="post-body">
-                <p class="post-meta">
-                  {formatDate(venue.data.updatedAt)} · {venue.data.area} · {venue.data.category}
-                </p>
-                <h3>{venue.data.title}</h3>
-                <p>{venue.data.shortDescription}</p>
-              </div>
-            </a>
-          </article>
-        ))}
-      </div>
-
-      {latestVenues.length > POST_INITIAL_COUNT && (
-        <div class="post-more-wrap">
-          <button type="button" class="post-more-button" data-post-more data-batch-size={POST_BATCH_SIZE}>더보기</button>
-        </div>
-      )}
-    </section>
-
     <section class="quick-links reveal">
-      <h2>카테고리 바로가기</h2>
+      <div class="section-head">
+        <h2>카테고리 빠른 선택</h2>
+        <p>원하는 유형을 먼저 고르면 찾는 속도가 빨라집니다.</p>
+      </div>
       <div class="chip-grid">
         {categories.map((category) => (
           <a href={`/${category.slug}/`}>{category.data.name}</a>
@@ -210,7 +192,32 @@ const getThumbPosition = (position) => {
       </div>
     </section>
 
-    <section class="area-grid reveal">
+    <section class="category-showcase reveal">
+      <div class="section-head">
+        <h2>추천 큐레이션</h2>
+        <p>카테고리별 대표 콘텐츠를 먼저 보고 상세로 이동하세요.</p>
+      </div>
+      <div class="category-list">
+        {categoryHighlights.map((item) => (
+          <a class="category-item" href={`/venue/${resolveVenueSlug(item.sample)}/`}>
+            <img
+              src={item.sample.data.thumbnail}
+              alt={item.sample.data.thumbnailAlt}
+              width="900"
+              height="560"
+              loading="lazy"
+              style={`object-position:${getThumbPosition(item.sample.data.thumbnailPosition)};`}
+            />
+            <div>
+              <p>{item.category.data.name}</p>
+              <h3>{item.sample.data.title}</h3>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="area-grid reveal compact">
       <div class="area-grid-head">
         <div>
           <h2>{areaSectionTitle}</h2>
@@ -246,26 +253,41 @@ const getThumbPosition = (position) => {
 
     <BannerSlot position="home_middle" />
 
-    <section class="category-showcase reveal">
-      <h2>카테고리 대표 글</h2>
-      <div class="category-list">
-        {categoryHighlights.map((item) => (
-          <a class="category-item" href={`/venue/${resolveVenueSlug(item.sample)}/`}>
-            <img
-              src={item.sample.data.thumbnail}
-              alt={item.sample.data.thumbnailAlt}
-              width="900"
-              height="560"
-              loading="lazy"
-              style={`object-position:${getThumbPosition(item.sample.data.thumbnailPosition)};`}
-            />
-            <div>
-              <p>{item.category.data.name}</p>
-              <h3>{item.sample.data.title}</h3>
-            </div>
-          </a>
+    <section class="post-feed reveal">
+      <div class="post-feed-head">
+        <h2>최신 게시물</h2>
+        <span>{latestVenues.length} entries</span>
+      </div>
+
+      <div class="post-grid">
+        {latestVenues.map((venue, index) => (
+          <article class="post-card" data-post-item hidden={index >= POST_INITIAL_COUNT}>
+            <a href={`/venue/${resolveVenueSlug(venue)}/`}>
+              <img
+                src={venue.data.thumbnail}
+                alt={venue.data.thumbnailAlt}
+                width="1200"
+                height="700"
+                loading="lazy"
+                style={`object-position:${getThumbPosition(venue.data.thumbnailPosition)};`}
+              />
+              <div class="post-body">
+                <p class="post-meta">
+                  {formatDate(venue.data.updatedAt)} · {venue.data.area} · {venue.data.category}
+                </p>
+                <h3>{venue.data.title}</h3>
+                <p>{venue.data.shortDescription}</p>
+              </div>
+            </a>
+          </article>
         ))}
       </div>
+
+      {latestVenues.length > POST_INITIAL_COUNT && (
+        <div class="post-more-wrap">
+          <button type="button" class="post-more-button" data-post-more data-batch-size={POST_BATCH_SIZE}>더보기</button>
+        </div>
+      )}
     </section>
 
     <section class="seo-copy reveal">
@@ -403,6 +425,10 @@ const getThumbPosition = (position) => {
     pointer-events: none;
   }
 
+  .hero-copy-wrap {
+    max-width: 860px;
+  }
+
   .hero-kicker {
     margin: 0;
     font-size: 0.8rem;
@@ -467,6 +493,40 @@ const getThumbPosition = (position) => {
     border-color: #67faff;
   }
 
+  .hero-cta-grid {
+    margin-top: 14px;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .hero-cta-card {
+    display: grid;
+    gap: 4px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 12px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .hero-cta-card p {
+    margin: 0;
+    color: #8befff;
+    font-size: 0.82rem;
+  }
+
+  .hero-cta-card strong {
+    color: #fff7c2;
+    font-size: 1.05rem;
+  }
+
+  .hero-cta-card span {
+    color: #d3dbed;
+    font-size: 0.86rem;
+  }
+
   .hero-cards {
     margin-top: 18px;
     display: grid;
@@ -509,17 +569,20 @@ const getThumbPosition = (position) => {
     color: #d6d9e3;
   }
 
-  .section-strip {
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: #00ebff;
-    color: #031018;
+  .section-head {
+    margin-bottom: 12px;
   }
 
-  .section-strip h2 {
+  .section-head h2 {
     margin: 0;
-    font-size: 1.5rem;
-    letter-spacing: 0.01em;
+    font-size: 1.45rem;
+    color: #ffe600;
+  }
+
+  .section-head p {
+    margin: 8px 0 0;
+    color: #d0d8ea;
+    font-size: 0.94rem;
   }
 
   .post-feed {
@@ -539,7 +602,7 @@ const getThumbPosition = (position) => {
   .post-feed-head h2 {
     margin: 0;
     font-size: 2rem;
-    color: #f8f8f8;
+    color: #ffe600;
   }
 
   .post-feed-head span {
@@ -626,12 +689,16 @@ const getThumbPosition = (position) => {
   }
 
   .quick-links h2,
-  .category-showcase h2,
   .seo-copy h2,
   .faq h2 {
     margin: 0 0 12px;
     font-size: 1.4rem;
     color: #ffe600;
+  }
+
+  .area-grid.compact {
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
 
   .area-grid-head {
