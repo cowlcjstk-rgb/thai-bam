@@ -171,8 +171,8 @@ const getThumbPosition = (position) => {
       <BannerSlot position="home_hero" />
 
       <div class="hero-cards">
-        {heroVenues.map((venue) => (
-          <a class="hero-card" href={`/venue/${resolveVenueSlug(venue)}/`}>
+        {heroVenues.map((venue, index) => (
+          <a class="hero-card" href={`/venue/${resolveVenueSlug(venue)}/`} data-hero-slide hidden={index !== 0}>
             <img
               src={venue.data.thumbnail}
               alt={venue.data.thumbnailAlt}
@@ -351,6 +351,22 @@ const getThumbPosition = (position) => {
       visiblePostCount = Math.min(visiblePostCount + postBatchSize, postItems.length);
       updatePosts();
     });
+
+    const heroSlides = Array.from(document.querySelectorAll('[data-hero-slide]'));
+    let heroSlideIndex = 0;
+    const showHeroSlide = (nextIndex) => {
+      heroSlides.forEach((slide, index) => {
+        slide.hidden = index !== nextIndex;
+      });
+    };
+
+    if (heroSlides.length > 1) {
+      showHeroSlide(0);
+      window.setInterval(() => {
+        heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
+        showHeroSlide(heroSlideIndex);
+      }, 3000);
+    }
 
     const areaToggleButton = document.querySelector('[data-area-toggle]');
     const areaContent = document.querySelector('[data-area-content]');
@@ -560,9 +576,7 @@ const getThumbPosition = (position) => {
 
   .hero-cards {
     margin-top: 18px;
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    position: relative;
   }
 
   .hero-card {
@@ -647,7 +661,7 @@ const getThumbPosition = (position) => {
     margin-top: 12px;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .post-more-wrap {
@@ -832,7 +846,7 @@ const getThumbPosition = (position) => {
   .category-list {
     display: grid;
     gap: 10px;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .category-item {
@@ -939,12 +953,6 @@ const getThumbPosition = (position) => {
 
     .area-grid-toggle {
       width: 100%;
-    }
-  }
-
-  @media (min-width: 700px) {
-    .post-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
