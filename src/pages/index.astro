@@ -25,7 +25,16 @@ const POST_INITIAL_COUNT = 6;
 const POST_BATCH_SIZE = 6;
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
 const featuredVenues = venues.filter((v) => v.data.featured).slice(0, 4);
-const heroVenues = featuredVenues.length > 0 ? featuredVenues : latestVenues.slice(0, 4);
+const heroVenues = (() => {
+  const source = featuredVenues.length >= 2 ? featuredVenues : latestVenues;
+  const seen = new Set();
+  return source.filter((entry) => {
+    const slug = resolveVenueSlug(entry);
+    if (seen.has(slug)) return false;
+    seen.add(slug);
+    return true;
+  }).slice(0, 4);
+})();
 const autoCategoryHighlights = categories
   .map((category) => {
     const sample = latestVenues.find((venue) => venue.data.category === category.slug);
@@ -144,7 +153,12 @@ const getThumbPosition = (position) => {
 
       <div class="hero-cards">
         {heroVenues.map((venue, index) => (
-          <a class="hero-card" href={`/venue/${resolveVenueSlug(venue)}/`} data-hero-slide hidden={index !== 0}>
+          <a
+            class={`hero-card ${index === 0 ? 'hero-slide-active' : ''}`}
+            href={`/venue/${resolveVenueSlug(venue)}/`}
+            data-hero-slide
+            aria-hidden={index === 0 ? 'false' : 'true'}
+          >
             <img
               src={venue.data.thumbnail}
               alt={venue.data.thumbnailAlt}
@@ -255,7 +269,9 @@ const getThumbPosition = (position) => {
     let heroSlideIndex = 0;
     const showHeroSlide = (nextIndex) => {
       heroSlides.forEach((slide, index) => {
-        slide.hidden = index !== nextIndex;
+        const isActive = index === nextIndex;
+        slide.classList.toggle('hero-slide-active', isActive);
+        slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
       });
     };
 
@@ -488,10 +504,12 @@ const getThumbPosition = (position) => {
   .hero-cards {
     margin-top: 18px;
     position: relative;
+    min-height: 260px;
   }
 
   .hero-card {
-    position: relative;
+    position: absolute;
+    inset: 0;
     display: block;
     text-decoration: none;
     color: inherit;
@@ -499,6 +517,17 @@ const getThumbPosition = (position) => {
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: #0d0e13;
+    opacity: 0;
+    transform: translateX(14px);
+    pointer-events: none;
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+
+  .hero-card.hero-slide-active {
+    position: relative;
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
   }
 
   .hero-card img {
