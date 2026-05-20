@@ -270,7 +270,7 @@ const getThumbPosition = (position) => {
     const postItems = Array.from(document.querySelectorAll('[data-post-item]'));
     const postMoreButton = document.querySelector('[data-post-more]');
     const postBatchSize = Number(postMoreButton?.getAttribute('data-batch-size') || 6);
-    let visiblePostCount = Math.min(POST_INITIAL_COUNT, postItems.length);
+    let visiblePostCount = postItems.filter((item) => !item.hidden).length || Math.min(6, postItems.length);
 
     const updatePosts = () => {
       postItems.forEach((item, index) => {
