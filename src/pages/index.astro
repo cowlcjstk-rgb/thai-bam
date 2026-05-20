@@ -21,6 +21,8 @@ const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?
 const heroDescriptionParts = (homeHero.heroDescription ?? '').split(/(?<=[.!?])\s+/).filter(Boolean);
 const heroDescriptionLead = heroDescriptionParts[0] ?? '';
 const heroDescriptionBody = heroDescriptionParts.slice(1).join(' ');
+const POST_INITIAL_COUNT = 6;
+const POST_BATCH_SIZE = 6;
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
 const featuredVenues = venues.filter((v) => v.data.featured).slice(0, 4);
 const heroVenues = featuredVenues.length > 0 ? featuredVenues : latestVenues.slice(0, 4);
@@ -115,9 +117,9 @@ const getThumbPosition = (position) => {
       </div>
 
       <div class="hero-actions">
-        <a href="/bangkok/">방콕 바로가기</a>
-        <a href="/pattaya/">파타야 바로가기</a>
-        <a href="/chiang-mai/">치앙마이 바로가기</a>
+        <a href="/bangkok/">방콕 지역</a>
+        <a href="/pattaya/">파타야 지역</a>
+        <a href="/chiang-mai/">치앙마이 지역</a>
       </div>
 
       <div class="hero-cta-grid">
@@ -197,7 +199,7 @@ const getThumbPosition = (position) => {
 
       <div class="post-grid">
         {latestVenues.map((venue, index) => (
-          <article class="post-card">
+          <article class="post-card" data-post-item hidden={index >= POST_INITIAL_COUNT}>
             <a href={`/venue/${resolveVenueSlug(venue)}/`}>
               <img
                 src={venue.data.thumbnail}
@@ -218,6 +220,11 @@ const getThumbPosition = (position) => {
           </article>
         ))}
       </div>
+      {latestVenues.length > POST_INITIAL_COUNT && (
+        <div class="post-more-wrap">
+          <button type="button" class="post-more-button" data-post-more data-batch-size={POST_BATCH_SIZE}>더보기</button>
+        </div>
+      )}
     </section>
 
     <section class="seo-copy reveal">
@@ -257,8 +264,34 @@ const getThumbPosition = (position) => {
       window.setInterval(() => {
         heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
         showHeroSlide(heroSlideIndex);
-      }, 3000);
+      }, 5000);
     }
+
+    const postItems = Array.from(document.querySelectorAll('[data-post-item]'));
+    const postMoreButton = document.querySelector('[data-post-more]');
+    const postBatchSize = Number(postMoreButton?.getAttribute('data-batch-size') || 6);
+    let visiblePostCount = Math.min(POST_INITIAL_COUNT, postItems.length);
+
+    const updatePosts = () => {
+      postItems.forEach((item, index) => {
+        item.hidden = index >= visiblePostCount;
+      });
+
+      if (!postMoreButton) return;
+      const remaining = Math.max(postItems.length - visiblePostCount, 0);
+      if (remaining <= 0) {
+        postMoreButton.hidden = true;
+        return;
+      }
+      postMoreButton.hidden = false;
+      postMoreButton.textContent = `더보기 (${Math.min(postBatchSize, remaining)}개)`;
+    };
+
+    updatePosts();
+    postMoreButton?.addEventListener('click', () => {
+      visiblePostCount = Math.min(visiblePostCount + postBatchSize, postItems.length);
+      updatePosts();
+    });
 
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver(
@@ -392,9 +425,10 @@ const getThumbPosition = (position) => {
 
   .hero-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     margin-top: 16px;
+    overflow-x: auto;
   }
 
   .hero-actions a {
@@ -409,6 +443,7 @@ const getThumbPosition = (position) => {
     text-decoration: none;
     background: rgba(255, 255, 255, 0.06);
     transition: transform 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
   }
 
   .hero-actions a:hover {
@@ -538,6 +573,23 @@ const getThumbPosition = (position) => {
     display: grid;
     gap: 12px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .post-more-wrap {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .post-more-button {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.07);
+    color: #f5f8ff;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   .post-card {
