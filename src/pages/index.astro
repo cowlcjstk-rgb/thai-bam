@@ -175,8 +175,8 @@ const getThumbPosition = (position) => {
         ))}
         {heroVenues.length > 1 && (
           <div class="hero-slider-controls" aria-label="추천 게시물 슬라이드 제어">
-            <button type="button" class="hero-slider-button" data-hero-prev aria-label="이전 게시물">이전</button>
-            <button type="button" class="hero-slider-button" data-hero-next aria-label="다음 게시물">다음</button>
+            <button type="button" class="hero-slider-arrow hero-slider-arrow-left" data-hero-prev aria-label="이전 게시물">&lsaquo;</button>
+            <button type="button" class="hero-slider-arrow hero-slider-arrow-right" data-hero-next aria-label="다음 게시물">&rsaquo;</button>
           </div>
         )}
       </div>
@@ -272,6 +272,7 @@ const getThumbPosition = (position) => {
 
   <script type="module">
     const heroSlides = Array.from(document.querySelectorAll('[data-hero-slide]'));
+    const heroCardsWrap = document.querySelector('.hero-cards');
     const heroPrevButton = document.querySelector('[data-hero-prev]');
     const heroNextButton = document.querySelector('[data-hero-next]');
     let heroSlideIndex = 0;
@@ -296,16 +297,54 @@ const getThumbPosition = (position) => {
     if (heroSlides.length > 1) {
       showHeroSlide(0);
       restartHeroAutoplay();
-      heroPrevButton?.addEventListener('click', () => {
-        heroSlideIndex = (heroSlideIndex - 1 + heroSlides.length) % heroSlides.length;
+
+      const moveHeroSlide = (direction) => {
+        heroSlideIndex = (heroSlideIndex + direction + heroSlides.length) % heroSlides.length;
         showHeroSlide(heroSlideIndex);
         restartHeroAutoplay();
+      };
+
+      heroPrevButton?.addEventListener('click', () => {
+        moveHeroSlide(-1);
       });
       heroNextButton?.addEventListener('click', () => {
-        heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
-        showHeroSlide(heroSlideIndex);
-        restartHeroAutoplay();
+        moveHeroSlide(1);
       });
+
+      let dragStartX = 0;
+      let didSwipe = false;
+      let isDragging = false;
+      const SWIPE_THRESHOLD = 42;
+
+      heroCardsWrap?.addEventListener('pointerdown', (event) => {
+        isDragging = true;
+        didSwipe = false;
+        dragStartX = event.clientX;
+      });
+
+      heroCardsWrap?.addEventListener('pointerup', (event) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const dragDistance = event.clientX - dragStartX;
+        if (Math.abs(dragDistance) < SWIPE_THRESHOLD) return;
+        didSwipe = true;
+        moveHeroSlide(dragDistance < 0 ? 1 : -1);
+      });
+
+      heroCardsWrap?.addEventListener('pointercancel', () => {
+        isDragging = false;
+      });
+
+      heroCardsWrap?.addEventListener(
+        'click',
+        (event) => {
+          if (!didSwipe) return;
+          didSwipe = false;
+          event.preventDefault();
+          event.stopPropagation();
+        },
+        true
+      );
     }
 
     const postItems = Array.from(document.querySelectorAll('[data-post-item]'));
@@ -530,6 +569,7 @@ const getThumbPosition = (position) => {
     margin-top: 18px;
     position: relative;
     min-height: 260px;
+    touch-action: pan-y;
   }
 
   .hero-card {
@@ -557,27 +597,40 @@ const getThumbPosition = (position) => {
 
   .hero-slider-controls {
     position: absolute;
-    right: 10px;
-    bottom: 10px;
+    inset: 0;
     z-index: 4;
-    display: inline-flex;
-    gap: 8px;
+    pointer-events: none;
   }
 
-  .hero-slider-button {
-    min-height: 34px;
-    padding: 0 12px;
+  .hero-slider-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 62px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.34);
-    background: rgba(6, 8, 12, 0.74);
-    color: #eef4ff;
+    border: 1px solid rgba(220, 227, 239, 0.38);
+    background: rgba(190, 198, 212, 0.24);
+    color: #edf4ff;
+    font-size: 1.45rem;
     font-weight: 700;
+    line-height: 1;
     cursor: pointer;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(3px);
+    pointer-events: auto;
   }
 
-  .hero-slider-button:hover {
-    border-color: #79f2ff;
+  .hero-slider-arrow-left {
+    left: 8px;
+  }
+
+  .hero-slider-arrow-right {
+    right: 8px;
+  }
+
+  .hero-slider-arrow:hover {
+    border-color: rgba(236, 244, 255, 0.64);
+    background: rgba(213, 221, 235, 0.34);
   }
 
   .hero-card img {
