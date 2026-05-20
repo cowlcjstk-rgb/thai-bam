@@ -165,12 +165,7 @@ const getThumbPosition = (position) => {
     <section class="category-showcase reveal">
       <div class="section-head">
         <h2>카테고리 추천 큐레이션</h2>
-        <p>카테고리 선택과 대표 콘텐츠 탐색을 한 번에 확인하세요.</p>
-      </div>
-      <div class="chip-grid">
-        {categories.map((category) => (
-          <a href={`/${category.slug}/`}>{category.data.name}</a>
-        ))}
+        <p>중복 선택 없이 대표 4개를 바로 비교하고 상세로 이동하세요.</p>
       </div>
       <div class="category-list">
         {categoryHighlights.map((item) => (
@@ -200,9 +195,9 @@ const getThumbPosition = (position) => {
         <span>{latestVenues.length} entries</span>
       </div>
 
-      <div class="post-grid post-slider">
+      <div class="post-grid">
         {latestVenues.map((venue, index) => (
-          <article class="post-card" data-post-slide hidden={index !== 0}>
+          <article class="post-card">
             <a href={`/venue/${resolveVenueSlug(venue)}/`}>
               <img
                 src={venue.data.thumbnail}
@@ -262,22 +257,6 @@ const getThumbPosition = (position) => {
       window.setInterval(() => {
         heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
         showHeroSlide(heroSlideIndex);
-      }, 3000);
-    }
-
-    const postSlides = Array.from(document.querySelectorAll('[data-post-slide]'));
-    let postSlideIndex = 0;
-    const showPostSlide = (nextIndex) => {
-      postSlides.forEach((slide, index) => {
-        slide.hidden = index !== nextIndex;
-      });
-    };
-
-    if (postSlides.length > 1) {
-      showPostSlide(0);
-      window.setInterval(() => {
-        postSlideIndex = (postSlideIndex + 1) % postSlides.length;
-        showPostSlide(postSlideIndex);
       }, 3000);
     }
 
@@ -556,11 +535,9 @@ const getThumbPosition = (position) => {
 
   .post-grid {
     margin-top: 12px;
-    display: block;
-  }
-
-  .post-slider .post-card {
-    width: 100%;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .post-card {
@@ -625,25 +602,10 @@ const getThumbPosition = (position) => {
     color: #ffe600;
   }
 
-  .chip-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .chip-grid a {
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    padding: 9px 12px;
-    text-decoration: none;
-    color: #eef3ff;
-    background: rgba(255, 255, 255, 0.06);
-  }
-
   .category-list {
     display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .category-item {
@@ -666,19 +628,20 @@ const getThumbPosition = (position) => {
   }
 
   .category-item div {
-    padding: 10px;
+    padding: 12px;
   }
 
   .category-item p {
     margin: 0;
     color: #67faff;
-    font-size: 0.84rem;
+    font-size: 0.9rem;
+    font-weight: 700;
   }
 
   .category-item h3 {
     margin: 6px 0 0;
     color: #f6f7fb;
-    font-size: 1rem;
+    font-size: 1.25rem;
     line-height: 1.45;
   }
 
@@ -743,5 +706,15 @@ const getThumbPosition = (position) => {
       font-size: 1.7rem;
     }
 
+  }
+
+  @media (min-width: 1080px) {
+    .post-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .category-list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 </style>
