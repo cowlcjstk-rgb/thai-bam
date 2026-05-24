@@ -139,6 +139,10 @@ function isProtectedPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/oauth" || pathname.startsWith("/oauth/");
 }
 
+function isAdminStaticPath(pathname) {
+  return pathname === "/admin" || pathname === "/admin/" || pathname === "/admin/index.html" || pathname === "/admin/config.yml";
+}
+
 function getCmsGithubToken(env) {
   for (const key of CMS_GITHUB_TOKEN_ENV_KEYS) {
     const value = env[key];
@@ -717,6 +721,17 @@ export default {
       return oauthSuccessScript(url, payload.access_token);
     }
 
-    return env.ASSETS.fetch(request);
+    const assetRes = await env.ASSETS.fetch(request);
+    if (!isAdminStaticPath(url.pathname)) return assetRes;
+
+    const headers = new Headers(assetRes.headers);
+    headers.set("cache-control", "no-store, no-cache, must-revalidate");
+    headers.set("pragma", "no-cache");
+    headers.set("expires", "0");
+    return new Response(assetRes.body, {
+      status: assetRes.status,
+      statusText: assetRes.statusText,
+      headers,
+    });
   },
 };
