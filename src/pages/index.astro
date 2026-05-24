@@ -892,6 +892,42 @@ const getThumbPosition = (position) => {
 
   }
 
+  @media (min-width: 1200px) {
+    .home-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      gap: 14px 18px;
+      align-items: start;
+    }
+
+    .hero-copy-wrap,
+    .hero-actions,
+    .hero-cta-grid {
+      grid-column: 1;
+    }
+
+    .hero-cards {
+      grid-column: 2;
+      grid-row: 1 / span 3;
+      margin-top: 0;
+      min-height: 460px;
+    }
+
+    .hero-card img {
+      aspect-ratio: 4 / 3;
+    }
+
+    .hero-cta-grid {
+      grid-template-columns: 1fr;
+      margin-top: 6px;
+    }
+
+    .home-hero :global(.banner-card) {
+      grid-column: 1 / -1;
+      margin: 6px 0 0;
+    }
+  }
+
   @media (min-width: 1080px) {
     .post-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
