@@ -9,5 +9,60 @@
   </head>
   <body>
     <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
+    <script>
+      (function () {
+        const style = document.createElement("style");
+        style.textContent = `
+          .cms-apply-wrap{position:fixed;right:16px;bottom:16px;z-index:99999;display:flex;gap:8px}
+          .cms-apply-btn{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid #2f3d5c;background:#ff34ae;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.28)}
+          .cms-apply-btn[disabled]{opacity:.6;cursor:not-allowed}
+          .cms-refresh-btn{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid #3d4b67;background:#101726;color:#e8efff;font-weight:700;cursor:pointer}
+        `;
+        document.head.appendChild(style);
+
+        const wrap = document.createElement("div");
+        wrap.className = "cms-apply-wrap";
+
+        const refreshBtn = document.createElement("button");
+        refreshBtn.type = "button";
+        refreshBtn.className = "cms-refresh-btn";
+        refreshBtn.textContent = "목록 새로고침";
+        refreshBtn.addEventListener("click", () => window.location.reload());
+
+        const applyBtn = document.createElement("button");
+        applyBtn.type = "button";
+        applyBtn.className = "cms-apply-btn";
+        applyBtn.textContent = "변경 적용";
+
+        applyBtn.addEventListener("click", async () => {
+          const ok = window.confirm("저장된 변경사항을 한 번에 메인 사이트에 적용할까요?");
+          if (!ok) return;
+          applyBtn.disabled = true;
+          applyBtn.textContent = "적용 중...";
+          try {
+            const res = await fetch("/admin/apply-changes", {
+              method: "POST",
+              credentials: "include",
+              headers: { "content-type": "application/json" },
+              body: "{}",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+              throw new Error(data.message || "변경 적용 실패");
+            }
+            window.alert(data.message || "변경 적용 완료");
+          } catch (error) {
+            window.alert(error?.message || "변경 적용 중 오류가 발생했습니다.");
+          } finally {
+            applyBtn.disabled = false;
+            applyBtn.textContent = "변경 적용";
+          }
+        });
+
+        wrap.appendChild(refreshBtn);
+        wrap.appendChild(applyBtn);
+        document.body.appendChild(wrap);
+      })();
+    </script>
   </body>
 </html>

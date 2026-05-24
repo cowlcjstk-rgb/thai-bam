@@ -1,7 +1,7 @@
 ﻿backend:
   name: github
   repo: cowlcjstk-rgb/thai-bam
-  branch: main
+  branch: cms-staging
   base_url: https://thai-bam.pages.dev
   auth_endpoint: oauth
   commit_messages:
@@ -16,7 +16,7 @@ display_url: https://thai-bam.pages.dev
 locale: ko
 media_folder: "public/uploads"
 public_folder: "/uploads"
-publish_mode: editorial_workflow
+publish_mode: simple
 show_preview_links: false
 
 editor:

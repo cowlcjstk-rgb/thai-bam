@@ -7,6 +7,9 @@ const ADMIN_SESSION_TTL = 60 * 60 * 12;
 const ADMIN_ENTRY_QUERY_KEY = "admin_auth";
 const ADMIN_ENTRY_QUERY_VALUE = "1";
 const CMS_GITHUB_TOKEN_ENV_KEYS = ["GITHUB_CMS_TOKEN", "GITHUB_PAT", "GITHUB_ACCESS_TOKEN"];
+const CMS_STAGING_BRANCH = "cms-staging";
+const CMS_PRODUCTION_BRANCH = "main";
+const CMS_REPO_FALLBACK = "cowlcjstk-rgb/thai-bam";
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -143,6 +146,68 @@ function getCmsGithubToken(env) {
   return "";
 }
 
+function getCmsRepo(env) {
+  const raw = String(env.CMS_GITHUB_REPO || CMS_REPO_FALLBACK).trim();
+  const [owner, repo] = raw.split("/");
+  if (!owner || !repo) return null;
+  return { owner, repo };
+}
+
+async function githubRequest(path, token, init = {}) {
+  const res = await fetch(`https://api.github.com${path}`, {
+    ...init,
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(init.headers || {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
+}
+
+async function applyCmsChanges(env) {
+  const token = getCmsGithubToken(env);
+  if (!token) {
+    return { ok: false, status: 500, message: "CMS GitHub token missing." };
+  }
+  const repo = getCmsRepo(env);
+  if (!repo) {
+    return { ok: false, status: 500, message: "CMS repo setting invalid." };
+  }
+
+  const mergeResult = await githubRequest(`/repos/${repo.owner}/${repo.repo}/merges`, token, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      base: CMS_PRODUCTION_BRANCH,
+      head: CMS_STAGING_BRANCH,
+      commit_message: `cms(apply): merge ${CMS_STAGING_BRANCH} into ${CMS_PRODUCTION_BRANCH} (${new Date().toISOString()})`,
+    }),
+  });
+
+  if (mergeResult.res.status === 201 || mergeResult.res.status === 204) {
+    return {
+      ok: true,
+      status: 200,
+      message: "변경 적용 완료. 배포가 곧 시작됩니다.",
+      sha: mergeResult.data?.sha || "",
+    };
+  }
+
+  if (mergeResult.res.status === 409) {
+    return { ok: false, status: 409, message: "병합 충돌이 있어 적용할 수 없습니다. 개발자 확인이 필요합니다." };
+  }
+
+  if (mergeResult.res.status === 404) {
+    return { ok: false, status: 404, message: "staging 브랜치를 찾지 못했습니다. 먼저 관리자에서 글 저장을 한 번 진행해 주세요." };
+  }
+
+  const message = mergeResult.data?.message || "변경 적용 요청 실패";
+  return { ok: false, status: mergeResult.res.status || 500, message };
+}
+
 function oauthSuccessScript(url, token) {
   const content = {
     token,
@@ -270,6 +335,29 @@ export default {
       if (isAdminEntryPath(url.pathname) && url.searchParams.get(ADMIN_ENTRY_QUERY_KEY) !== ADMIN_ENTRY_QUERY_VALUE) {
         return loginPage(url);
       }
+    }
+
+    if (url.pathname === "/admin/apply-changes") {
+      if (request.method !== "POST") {
+        return new Response(JSON.stringify({ ok: false, message: "Method Not Allowed" }), {
+          status: 405,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+
+      const sessionValid = await isAdminSessionValid(request, env);
+      if (!sessionValid) {
+        return new Response(JSON.stringify({ ok: false, message: "Unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+
+      const result = await applyCmsChanges(env);
+      return new Response(JSON.stringify(result), {
+        status: result.status,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
     }
 
     if (url.pathname === "/oauth") {
