@@ -202,6 +202,16 @@
           return data;
         };
 
+        const refreshAllLists = async () => {
+          const results = await Promise.allSettled([fetchPending(), fetchVenues()]);
+          const failed = results
+            .filter((entry) => entry.status === "rejected")
+            .map((entry) => (entry.reason && entry.reason.message) || "목록 조회 실패");
+          if (failed.length > 0) {
+            throw new Error(failed.join(" / "));
+          }
+        };
+
         applyBtn.addEventListener("click", async () => {
           const ok = window.confirm("저장된 변경사항을 한 번에 메인 사이트에 적용할까요?");
           if (!ok) return;
@@ -210,7 +220,7 @@
           try {
             const data = await runApply();
             window.alert(data.message || "변경 적용 완료");
-            await fetchPending().catch(() => {});
+            await refreshAllLists().catch(() => {});
           } catch (error) {
             window.alert(error?.message || "변경 적용 중 오류가 발생했습니다.");
           } finally {
@@ -222,8 +232,7 @@
         pendingBtn.addEventListener("click", async () => {
           modal.classList.add("is-open");
           try {
-            await fetchPending();
-            await fetchVenues();
+            await refreshAllLists();
           } catch (error) {
             pendingSummary.textContent = error?.message || "대기 목록 조회 오류";
           }
@@ -236,8 +245,7 @@
 
         pendingRefreshBtn.addEventListener("click", async () => {
           try {
-            await fetchPending();
-            await fetchVenues();
+            await refreshAllLists();
           } catch (error) {
             window.alert(error?.message || "목록 새로고침 실패");
           }
@@ -251,8 +259,7 @@
           try {
             const data = await runApply();
             window.alert(data.message || "변경 적용 완료");
-            await fetchPending();
-            await fetchVenues();
+            await refreshAllLists();
           } catch (error) {
             window.alert(error?.message || "변경 적용 실패");
           } finally {
@@ -284,8 +291,7 @@
           try {
             const data = await runBulkDelete(selected);
             window.alert(data.message || "삭제 완료");
-            await fetchPending();
-            await fetchVenues();
+            await refreshAllLists();
           } catch (error) {
             window.alert(error?.message || "일괄 삭제 실패");
           } finally {
@@ -299,7 +305,7 @@
         wrap.appendChild(applyBtn);
         document.body.appendChild(wrap);
 
-        Promise.all([fetchPending(), fetchVenues()]).catch(() => {});
+        refreshAllLists().catch(() => {});
       })();
     </script>
   </body>

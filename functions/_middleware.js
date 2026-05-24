@@ -168,6 +168,13 @@ async function githubRequest(path, token, init = {}) {
   return { res, data };
 }
 
+function encodeGithubPath(path) {
+  return String(path || "")
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
 async function applyCmsChanges(env) {
   const token = getCmsGithubToken(env);
   if (!token) {
@@ -272,11 +279,12 @@ function sanitizeSlugs(input) {
 
 async function deleteVenueBySlug(repo, token, slug) {
   const path = `${VENUES_FOLDER}/${slug}.md`;
-  const lookup = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(path)}?ref=${CMS_STAGING_BRANCH}`, token);
+  const encodedPath = encodeGithubPath(path);
+  const lookup = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodedPath}?ref=${CMS_STAGING_BRANCH}`, token);
   if (lookup.res.status === 404) return { slug, ok: false, reason: "not_found" };
   if (!lookup.res.ok || !lookup.data?.sha) return { slug, ok: false, reason: "lookup_failed" };
 
-  const del = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(path)}`, token, {
+  const del = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodedPath}`, token, {
     method: "DELETE",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -340,7 +348,7 @@ async function listAllVenues(env) {
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
   const listRes = await githubRequest(
-    `/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(VENUES_FOLDER)}?ref=${CMS_STAGING_BRANCH}`,
+    `/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(VENUES_FOLDER)}?ref=${CMS_STAGING_BRANCH}`,
     token
   );
 
@@ -354,7 +362,10 @@ async function listAllVenues(env) {
 
   const items = [];
   for (const file of files) {
-    const detail = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(file.path)}?ref=${CMS_STAGING_BRANCH}`, token);
+    const detail = await githubRequest(
+      `/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(file.path)}?ref=${CMS_STAGING_BRANCH}`,
+      token
+    );
     if (!detail.res.ok) {
       items.push({ slug: file.slug, title: file.slug, area: "", category: "" });
       continue;
