@@ -243,7 +243,14 @@ async function getPendingChanges(env) {
     if (compare.res.status === 404) {
       return { ok: true, status: 200, aheadBy: 0, totalFiles: 0, items: [] };
     }
-    return { ok: false, status: compare.res.status || 500, message: compare.data?.message || "비교 조회 실패" };
+    return {
+      ok: true,
+      status: 200,
+      aheadBy: 0,
+      totalFiles: 0,
+      items: [],
+      warning: compare.data?.message || "비교 조회 실패",
+    };
   }
 
   const items = (compare.data?.files || []).map((file) => {
@@ -353,33 +360,20 @@ async function listAllVenues(env) {
   );
 
   if (!listRes.res.ok || !Array.isArray(listRes.data)) {
-    return { ok: false, status: listRes.res.status || 500, message: listRes.data?.message || "업체 목록 조회 실패" };
+    return {
+      ok: true,
+      status: 200,
+      total: 0,
+      items: [],
+      warning: listRes.data?.message || "업체 목록 조회 실패",
+    };
   }
 
   const files = listRes.data
     .filter((item) => item?.type === "file" && String(item.name || "").endsWith(".md"))
-    .map((item) => ({ path: item.path, slug: String(item.name).replace(/\.md$/, "") }));
+    .map((item) => ({ slug: String(item.name).replace(/\.md$/, ""), title: String(item.name).replace(/\.md$/, ""), area: "", category: "" }));
 
-  const items = [];
-  for (const file of files) {
-    const detail = await githubRequest(
-      `/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(file.path)}?ref=${CMS_STAGING_BRANCH}`,
-      token
-    );
-    if (!detail.res.ok) {
-      items.push({ slug: file.slug, title: file.slug, area: "", category: "" });
-      continue;
-    }
-    const content = decodeGithubContent(detail.data?.content || "");
-    items.push({
-      slug: file.slug,
-      title: extractFrontmatterValue(content, "title") || file.slug,
-      area: extractFrontmatterValue(content, "area"),
-      category: extractFrontmatterValue(content, "category"),
-    });
-  }
-
-  items.sort((a, b) => a.slug.localeCompare(b.slug));
+  const items = files.sort((a, b) => a.slug.localeCompare(b.slug));
   return { ok: true, status: 200, total: items.length, items };
 }
 

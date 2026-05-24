@@ -97,6 +97,9 @@
         const venuesDeleteBtn = modal.querySelector("[data-venues-delete]");
         const pendingApplyBtn = modal.querySelector("[data-pending-apply]");
         const pendingCloseBtn = modal.querySelector("[data-pending-close]");
+        let currentPendingCount = 0;
+        let pendingWarning = "";
+        let venueWarning = "";
         const selectedVenueSlugs = new Set();
         let sidebarPendingBtn = null;
         let venueSelectMode = false;
@@ -123,6 +126,12 @@
           const label = `변경대기중 확인 (${count})`;
           pendingBtn.textContent = label;
           if (sidebarPendingBtn) sidebarPendingBtn.textContent = `변경 대기 중 (${count})`;
+        };
+
+        const updatePendingSummaryText = () => {
+          const warnings = [pendingWarning, venueWarning].filter(Boolean);
+          const warningText = warnings.length > 0 ? ` · ${warnings.join(" / ")}` : "";
+          pendingSummary.textContent = `대기 변경 ${currentPendingCount}건${warningText}`;
         };
 
         const ensureSidebarPendingButton = () => {
@@ -313,7 +322,9 @@
         const renderPending = (data) => {
           pendingList.innerHTML = "";
           const items = Array.isArray(data?.items) ? data.items : [];
-          pendingSummary.textContent = `대기 변경 ${items.length}건`;
+          currentPendingCount = items.length;
+          pendingWarning = data?.warning ? `비교 조회 제한: ${data.warning}` : "";
+          updatePendingSummaryText();
           updatePendingButtonLabel(items.length);
           if (items.length === 0) {
             const empty = document.createElement("div");
@@ -395,6 +406,8 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.ok) throw new Error(data.message || "업체 목록 조회 실패");
           renderVenues(data);
+          venueWarning = data?.warning ? `업체 목록 제한: ${data.warning}` : "";
+          updatePendingSummaryText();
           return data;
         };
 
@@ -423,13 +436,20 @@
         };
 
         const refreshAllLists = async () => {
-          const results = await Promise.allSettled([fetchPending(), fetchVenues()]);
-          const failed = results
-            .filter((entry) => entry.status === "rejected")
-            .map((entry) => (entry.reason && entry.reason.message) || "목록 조회 실패");
-          if (failed.length > 0) {
-            throw new Error(failed.join(" / "));
-          }
+          const errors = [];
+          pendingWarning = "";
+          venueWarning = "";
+          await fetchPending().catch((error) => {
+            errors.push(error?.message || "대기 목록 조회 실패");
+            pendingWarning = `대기 목록 실패: ${error?.message || "조회 실패"}`;
+          });
+          await fetchVenues().catch((error) => {
+            errors.push(error?.message || "업체 목록 조회 실패");
+            venueWarning = `업체 목록 실패: ${error?.message || "조회 실패"}`;
+            renderVenues({ items: [] });
+          });
+          updatePendingSummaryText();
+          return { ok: errors.length === 0, errors };
         };
 
         applyBtn.addEventListener("click", async () => {
@@ -451,11 +471,7 @@
 
         pendingBtn.addEventListener("click", async () => {
           modal.classList.add("is-open");
-          try {
-            await refreshAllLists();
-          } catch (error) {
-            pendingSummary.textContent = error?.message || "대기 목록 조회 오류";
-          }
+          await refreshAllLists();
         });
 
         pendingCloseBtn.addEventListener("click", () => modal.classList.remove("is-open"));
@@ -464,11 +480,7 @@
         });
 
         pendingRefreshBtn.addEventListener("click", async () => {
-          try {
-            await refreshAllLists();
-          } catch (error) {
-            window.alert(error?.message || "목록 새로고침 실패");
-          }
+          await refreshAllLists();
         });
 
         pendingApplyBtn.addEventListener("click", async () => {
@@ -530,10 +542,20 @@
           ensureSidebarPendingButton();
         });
 
+        let syncScheduled = false;
+        const scheduleSync = () => {
+          if (syncScheduled) return;
+          syncScheduled = true;
+          requestAnimationFrame(() => {
+            syncScheduled = false;
+            ensureSidebarPendingButton();
+            syncVenueToolbarPlacement();
+            if (venueSelectMode) decorateVenueEntriesForSelection();
+          });
+        };
+
         const domObserver = new MutationObserver(() => {
-          ensureSidebarPendingButton();
-          syncVenueToolbarPlacement();
-          if (venueSelectMode) decorateVenueEntriesForSelection();
+          scheduleSync();
         });
         domObserver.observe(document.body, { childList: true, subtree: true });
 
