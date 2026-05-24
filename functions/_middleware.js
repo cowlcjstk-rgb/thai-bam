@@ -165,8 +165,21 @@ function getUserTokenFromRequest(request) {
   return token;
 }
 
+function resolveCmsReadToken(env, request) {
+  return getUserTokenFromRequest(request) || getCmsGithubToken(env) || "";
+}
+
 function resolveCmsWriteToken(env, request) {
-  return getCmsGithubToken(env) || getUserTokenFromRequest(request);
+  return getUserTokenFromRequest(request) || getCmsGithubToken(env) || "";
+}
+
+async function githubReadWithFallback(path, token) {
+  const first = await githubRequest(path, token);
+  if (first.res.ok) return first;
+  if (token && (first.res.status === 401 || first.res.status === 403)) {
+    return githubRequest(path, "");
+  }
+  return first;
 }
 
 function formatGithubFailure(action, res, data) {
@@ -261,12 +274,12 @@ function extractVenueSlugFromPath(path) {
   return match ? match[1] : "";
 }
 
-async function getPendingChanges(env) {
-  const token = getCmsGithubToken(env);
+async function getPendingChanges(env, request) {
+  const token = resolveCmsReadToken(env, request);
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
-  const compare = await githubRequest(
+  const compare = await githubReadWithFallback(
     `/repos/${repo.owner}/${repo.repo}/compare/${CMS_PRODUCTION_BRANCH}...${CMS_STAGING_BRANCH}`,
     token
   );
@@ -377,12 +390,12 @@ function extractFrontmatterValue(text, key) {
   return String(match[1] || "").trim().replace(/^['"]|['"]$/g, "");
 }
 
-async function listAllVenues(env) {
-  const token = getCmsGithubToken(env);
+async function listAllVenues(env, request) {
+  const token = resolveCmsReadToken(env, request);
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
-  const listRes = await githubRequest(
+  const listRes = await githubReadWithFallback(
     `/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(VENUES_FOLDER)}?ref=${CMS_STAGING_BRANCH}`,
     token
   );
@@ -581,7 +594,7 @@ export async function onRequest(context) {
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
       });
     }
-    const result = await getPendingChanges(env);
+    const result = await getPendingChanges(env, request);
     return new Response(JSON.stringify(result), {
       status: result.status,
       headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -624,7 +637,7 @@ export async function onRequest(context) {
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
       });
     }
-    const result = await listAllVenues(env);
+    const result = await listAllVenues(env, request);
     return new Response(JSON.stringify(result), {
       status: result.status,
       headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
