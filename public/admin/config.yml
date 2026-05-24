@@ -196,6 +196,7 @@ collections:
           - { label: 메인 히어로(모바일 첫 화면), value: home_hero }
           - { label: 메인 상단, value: home_top }
           - { label: 메인 중간, value: home_middle }
+          - { label: 메인 우측/모바일 하단(최대 6개), value: home_sidebar }
           - { label: 지역 페이지 상단, value: area_top }
           - { label: 카테고리 페이지 상단, value: category_top }
           - { label: 업체 상세 상단, value: venue_top }

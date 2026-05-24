@@ -180,6 +180,10 @@ const getThumbPosition = (position) => {
           </div>
         )}
       </div>
+
+      <div class="home-side-banners">
+        <BannerSlot position="home_sidebar" limit={6} />
+      </div>
     </section>
 
     <BannerSlot position="home_top" />
@@ -268,6 +272,10 @@ const getThumbPosition = (position) => {
     <div class="reveal">
       <ContactInquiryBanner />
     </div>
+
+    <section class="home-mobile-banners reveal" aria-label="모바일 하단 배너">
+      <BannerSlot position="home_sidebar" limit={6} />
+    </section>
   </div>
 
   <script type="module">
@@ -866,6 +874,23 @@ const getThumbPosition = (position) => {
     transform: translateY(0);
   }
 
+  .home-side-banners {
+    display: none;
+  }
+
+  .home-mobile-banners {
+    display: block;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(8, 9, 12, 0.9);
+  }
+
+  .home-mobile-banners :global(.banner-card) {
+    margin: 10px 0;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
   @media (max-width: 780px) {
     :global(main) {
       padding-inline: 10px;
@@ -908,9 +933,31 @@ const getThumbPosition = (position) => {
 
     .hero-cards {
       grid-column: 2;
-      grid-row: 1 / span 3;
+      grid-row: 1;
       margin-top: 0;
       min-height: 460px;
+    }
+
+    .home-side-banners {
+      display: block;
+      grid-column: 2;
+      grid-row: 2 / span 3;
+      align-self: start;
+    }
+
+    .home-side-banners :global(.banner-card) {
+      margin: 8px 0;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .home-side-banners :global(.banner-card img) {
+      width: 100%;
+      aspect-ratio: 16 / 5;
+      object-fit: cover;
+    }
+
+    .home-side-banners :global(.banner-overlay) {
+      display: none;
     }
 
     .hero-card img {
@@ -925,6 +972,10 @@ const getThumbPosition = (position) => {
     .home-hero :global(.banner-card) {
       grid-column: 1 / -1;
       margin: 6px 0 0;
+    }
+
+    .home-mobile-banners {
+      display: none;
     }
   }
 

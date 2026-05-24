@@ -98,7 +98,7 @@ const banners = defineCollection({
   type: 'content',
   schema: z.object({
     title: z.string(),
-    position: z.enum(['home_hero', 'home_top', 'home_middle', 'area_top', 'category_top', 'venue_top', 'venue_bottom']),
+    position: z.enum(['home_hero', 'home_top', 'home_middle', 'home_sidebar', 'area_top', 'category_top', 'venue_top', 'venue_bottom']),
     image: z.string(),
     imageAlt: z.string().trim().min(1),
     linkUrl: z.string().optional().default('#'),
