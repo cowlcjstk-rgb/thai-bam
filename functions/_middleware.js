@@ -154,6 +154,19 @@ function getCmsRepo(env) {
   return { owner, repo };
 }
 
+function formatGithubFailure(action, res, data) {
+  const status = Number(res?.status || 0);
+  const message = String(data?.message || "").trim();
+  if (status === 401) return `${action} 실패: GitHub 인증 오류(토큰 확인 필요)`;
+  if (status === 403) {
+    if (/rate limit/i.test(message)) return `${action} 실패: GitHub API 요청 한도 초과`;
+    return `${action} 실패: GitHub 권한 부족`;
+  }
+  if (status === 404) return `${action} 실패: 대상 브랜치/경로를 찾지 못함`;
+  if (message) return `${action} 실패: ${message}`;
+  return `${action} 실패 (HTTP ${status || 500})`;
+}
+
 async function githubRequest(path, token, init = {}) {
   const headers = {
     Accept: "application/vnd.github+json",
@@ -244,7 +257,11 @@ async function getPendingChanges(env) {
     if (compare.res.status === 404) {
       return { ok: true, status: 200, aheadBy: 0, totalFiles: 0, items: [] };
     }
-    return { ok: false, status: compare.res.status || 500, message: compare.data?.message || "비교 조회 실패" };
+    return {
+      ok: false,
+      status: compare.res.status || 500,
+      message: formatGithubFailure("비교 조회", compare.res, compare.data),
+    };
   }
 
   const items = (compare.data?.files || []).map((file) => {
@@ -353,7 +370,11 @@ async function listAllVenues(env) {
   );
 
   if (!listRes.res.ok || !Array.isArray(listRes.data)) {
-    return { ok: false, status: listRes.res.status || 500, message: listRes.data?.message || "업체 목록 조회 실패" };
+    return {
+      ok: false,
+      status: listRes.res.status || 500,
+      message: formatGithubFailure("업체 목록 조회", listRes.res, listRes.data),
+    };
   }
 
   const files = listRes.data
