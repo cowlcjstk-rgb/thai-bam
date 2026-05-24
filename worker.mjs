@@ -243,14 +243,7 @@ async function getPendingChanges(env) {
     if (compare.res.status === 404) {
       return { ok: true, status: 200, aheadBy: 0, totalFiles: 0, items: [] };
     }
-    return {
-      ok: true,
-      status: 200,
-      aheadBy: 0,
-      totalFiles: 0,
-      items: [],
-      warning: compare.data?.message || "비교 조회 실패",
-    };
+    return { ok: false, status: compare.res.status || 500, message: compare.data?.message || "비교 조회 실패" };
   }
 
   const items = (compare.data?.files || []).map((file) => {
@@ -360,13 +353,7 @@ async function listAllVenues(env) {
   );
 
   if (!listRes.res.ok || !Array.isArray(listRes.data)) {
-    return {
-      ok: true,
-      status: 200,
-      total: 0,
-      items: [],
-      warning: listRes.data?.message || "업체 목록 조회 실패",
-    };
+    return { ok: false, status: listRes.res.status || 500, message: listRes.data?.message || "업체 목록 조회 실패" };
   }
 
   const files = listRes.data
