@@ -158,6 +158,17 @@ function getCmsRepo(env) {
   return { owner, repo };
 }
 
+function getUserTokenFromRequest(request) {
+  const token = String(request.headers.get("x-cms-user-token") || "").trim();
+  if (!token) return "";
+  if (token.length < 20 || token.length > 1024) return "";
+  return token;
+}
+
+function resolveCmsWriteToken(env, request) {
+  return getCmsGithubToken(env) || getUserTokenFromRequest(request);
+}
+
 function formatGithubFailure(action, res, data) {
   const status = Number(res?.status || 0);
   const message = String(data?.message || "").trim();
@@ -194,10 +205,10 @@ function encodeGithubPath(path) {
     .join("/");
 }
 
-async function applyCmsChanges(env) {
-  const token = getCmsGithubToken(env);
+async function applyCmsChanges(env, request) {
+  const token = resolveCmsWriteToken(env, request);
   if (!token) {
-    return { ok: false, status: 500, message: "적용 권한 토큰이 없습니다. 관리자에게 GITHUB_CMS_TOKEN 설정을 요청해 주세요." };
+    return { ok: false, status: 500, message: "적용 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   }
   const repo = getCmsRepo(env);
   if (!repo) {
@@ -231,8 +242,11 @@ async function applyCmsChanges(env) {
     return { ok: false, status: 404, message: "staging 브랜치를 찾지 못했습니다. 먼저 관리자에서 글 저장을 한 번 진행해 주세요." };
   }
 
-  const message = mergeResult.data?.message || "변경 적용 요청 실패";
-  return { ok: false, status: mergeResult.res.status || 500, message };
+  return {
+    ok: false,
+    status: mergeResult.res.status || 500,
+    message: formatGithubFailure("변경 적용", mergeResult.res, mergeResult.data),
+  };
 }
 
 function mapCollectionFromPath(path) {
@@ -320,9 +334,9 @@ async function deleteVenueBySlug(repo, token, slug) {
   return { slug, ok: false, reason: del.data?.message || "delete_failed" };
 }
 
-async function bulkDeleteVenues(env, slugs) {
-  const token = getCmsGithubToken(env);
-  if (!token) return { ok: false, status: 500, message: "삭제 권한 토큰이 없습니다. 관리자에게 GITHUB_CMS_TOKEN 설정을 요청해 주세요." };
+async function bulkDeleteVenues(env, request, slugs) {
+  const token = resolveCmsWriteToken(env, request);
+  if (!token) return { ok: false, status: 500, message: "삭제 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -546,7 +560,7 @@ export default {
         });
       }
 
-      const result = await applyCmsChanges(env);
+      const result = await applyCmsChanges(env, request);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -589,7 +603,7 @@ export default {
         });
       }
       const body = await request.json().catch(() => ({}));
-      const result = await bulkDeleteVenues(env, body?.slugs || []);
+      const result = await bulkDeleteVenues(env, request, body?.slugs || []);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },

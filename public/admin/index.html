@@ -434,11 +434,47 @@
           return data;
         };
 
+        const getCmsUserToken = () => {
+          const keys = [
+            "decap-cms-user",
+            "netlify-cms-user",
+            "CMS_USER",
+            "NETLIFY_CMS_USER",
+          ];
+          for (const key of keys) {
+            const raw = window.localStorage.getItem(key);
+            if (!raw) continue;
+            try {
+              const parsed = JSON.parse(raw);
+              const candidates = [
+                parsed?.token,
+                parsed?.access_token,
+                parsed?.oauth_token,
+                parsed?.github_token,
+                parsed?.user?.token,
+                parsed?.user?.access_token,
+              ];
+              const hit = candidates.find((value) => typeof value === "string" && value.length >= 20);
+              if (hit) return hit;
+            } catch {
+              if (typeof raw === "string" && raw.length >= 20) return raw;
+            }
+          }
+          return "";
+        };
+
+        const buildWriteHeaders = () => {
+          const headers = { "content-type": "application/json" };
+          const token = getCmsUserToken();
+          if (token) headers["x-cms-user-token"] = token;
+          return headers;
+        };
+
         const runApply = async () => {
           const res = await fetch("/admin/apply-changes", {
             method: "POST",
             credentials: "include",
-            headers: { "content-type": "application/json" },
+            headers: buildWriteHeaders(),
             body: "{}",
           });
           const data = await res.json().catch(() => ({}));
@@ -450,7 +486,7 @@
           const res = await fetch("/admin/bulk-delete-venues", {
             method: "POST",
             credentials: "include",
-            headers: { "content-type": "application/json" },
+            headers: buildWriteHeaders(),
             body: JSON.stringify({ slugs }),
           });
           const data = await res.json().catch(() => ({}));
@@ -487,11 +523,11 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.ok) {
             healthWarning = "";
-            cmsWriteEnabled = true;
+            cmsWriteEnabled = Boolean(getCmsUserToken());
             syncWriteButtons();
             return;
           }
-          cmsWriteEnabled = Boolean(data.tokenPresent);
+          cmsWriteEnabled = Boolean(data.tokenPresent) || Boolean(getCmsUserToken());
           healthWarning = cmsWriteEnabled ? "" : "읽기만 가능(토큰 미설정): 적용/삭제 비활성";
           syncWriteButtons();
           updatePendingSummaryText();
