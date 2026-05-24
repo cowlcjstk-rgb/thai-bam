@@ -100,6 +100,8 @@
         let currentPendingCount = 0;
         let pendingWarning = "";
         let venueWarning = "";
+        let healthWarning = "";
+        let cmsWriteEnabled = true;
         const selectedVenueSlugs = new Set();
         let sidebarPendingBtn = null;
         let venueSelectMode = false;
@@ -142,9 +144,16 @@
         };
 
         const updatePendingSummaryText = () => {
-          const warnings = [pendingWarning, venueWarning].filter(Boolean);
+          const warnings = [healthWarning, pendingWarning, venueWarning].filter(Boolean);
           const warningText = warnings.length > 0 ? ` · ${warnings.join(" / ")}` : "";
           pendingSummary.textContent = `대기 변경 ${currentPendingCount}건${warningText}`;
+        };
+
+        const syncWriteButtons = () => {
+          applyBtn.disabled = !cmsWriteEnabled;
+          pendingApplyBtn.disabled = !cmsWriteEnabled;
+          venuesDeleteBtn.disabled = !cmsWriteEnabled;
+          if (venueDeleteBtn) venueDeleteBtn.disabled = !cmsWriteEnabled || selectedVenueSlugs.size === 0 || !venueSelectMode;
         };
 
         const ensureSidebarPendingButton = () => {
@@ -178,7 +187,7 @@
           if (!venueToolbar) return;
           const selectedCount = selectedVenueSlugs.size;
           if (venueCountText) venueCountText.textContent = `${selectedCount}개 선택`;
-          if (venueDeleteBtn) venueDeleteBtn.disabled = selectedCount === 0 || !venueSelectMode;
+          if (venueDeleteBtn) venueDeleteBtn.disabled = !cmsWriteEnabled || selectedCount === 0 || !venueSelectMode;
           if (venueToggleBtn) venueToggleBtn.textContent = venueSelectMode ? "선택 모드 종료" : "선택 모드";
         };
 
@@ -473,6 +482,21 @@
           return { ok: errors.length === 0, errors };
         };
 
+        const fetchCmsHealth = async () => {
+          const res = await fetch("/admin/cms-health", { credentials: "include" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) {
+            healthWarning = "";
+            cmsWriteEnabled = true;
+            syncWriteButtons();
+            return;
+          }
+          cmsWriteEnabled = Boolean(data.tokenPresent);
+          healthWarning = cmsWriteEnabled ? "" : "읽기만 가능(토큰 미설정): 적용/삭제 비활성";
+          syncWriteButtons();
+          updatePendingSummaryText();
+        };
+
         applyBtn.addEventListener("click", async () => {
           const ok = window.confirm("저장된 변경사항을 한 번에 메인 사이트에 적용할까요?");
           if (!ok) return;
@@ -582,7 +606,7 @@
 
         ensureSidebarPendingButton();
         syncVenueToolbarPlacement();
-        refreshAllLists().catch(() => {});
+        Promise.all([fetchCmsHealth(), refreshAllLists()]).catch(() => {});
       })();
     </script>
   </body>

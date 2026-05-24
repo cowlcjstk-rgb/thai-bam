@@ -155,14 +155,16 @@ function getCmsRepo(env) {
 }
 
 async function githubRequest(path, token, init = {}) {
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    ...(init.headers || {}),
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(`https://api.github.com${path}`, {
     ...init,
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      ...(init.headers || {}),
-    },
+    headers,
   });
   const data = await res.json().catch(() => ({}));
   return { res, data };
@@ -178,7 +180,7 @@ function encodeGithubPath(path) {
 async function applyCmsChanges(env) {
   const token = getCmsGithubToken(env);
   if (!token) {
-    return { ok: false, status: 500, message: "CMS GitHub token missing." };
+    return { ok: false, status: 500, message: "적용 권한 토큰이 없습니다. 관리자에게 GITHUB_CMS_TOKEN 설정을 요청해 주세요." };
   }
   const repo = getCmsRepo(env);
   if (!repo) {
@@ -230,7 +232,6 @@ function extractVenueSlugFromPath(path) {
 
 async function getPendingChanges(env) {
   const token = getCmsGithubToken(env);
-  if (!token) return { ok: false, status: 500, message: "CMS GitHub token missing." };
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -300,7 +301,7 @@ async function deleteVenueBySlug(repo, token, slug) {
 
 async function bulkDeleteVenues(env, slugs) {
   const token = getCmsGithubToken(env);
-  if (!token) return { ok: false, status: 500, message: "CMS GitHub token missing." };
+  if (!token) return { ok: false, status: 500, message: "삭제 권한 토큰이 없습니다. 관리자에게 GITHUB_CMS_TOKEN 설정을 요청해 주세요." };
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -343,7 +344,6 @@ function extractFrontmatterValue(text, key) {
 
 async function listAllVenues(env) {
   const token = getCmsGithubToken(env);
-  if (!token) return { ok: false, status: 500, message: "CMS GitHub token missing." };
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -362,6 +362,18 @@ async function listAllVenues(env) {
 
   const items = files.sort((a, b) => a.slug.localeCompare(b.slug));
   return { ok: true, status: 200, total: items.length, items };
+}
+
+function getCmsHealth(env) {
+  const repo = getCmsRepo(env);
+  return {
+    ok: true,
+    status: 200,
+    tokenPresent: Boolean(getCmsGithubToken(env)),
+    repo: repo ? `${repo.owner}/${repo.repo}` : "",
+    stagingBranch: CMS_STAGING_BRANCH,
+    productionBranch: CMS_PRODUCTION_BRANCH,
+  };
 }
 
 function oauthSuccessScript(token) {
@@ -574,6 +586,27 @@ export async function onRequest(context) {
       });
     }
     const result = await listAllVenues(env);
+    return new Response(JSON.stringify(result), {
+      status: result.status,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
+
+  if (url.pathname === "/admin/cms-health") {
+    if (request.method !== "GET") {
+      return new Response(JSON.stringify({ ok: false, message: "Method Not Allowed" }), {
+        status: 405,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+    const sessionValid = await isAdminSessionValid(request, env);
+    if (!sessionValid) {
+      return new Response(JSON.stringify({ ok: false, message: "Unauthorized" }), {
+        status: 401,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+    const result = getCmsHealth(env);
     return new Response(JSON.stringify(result), {
       status: result.status,
       headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
