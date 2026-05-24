@@ -318,6 +318,60 @@ async function bulkDeleteVenues(env, slugs) {
   };
 }
 
+function decodeGithubContent(base64) {
+  try {
+    const normalized = String(base64 || "").replace(/\n/g, "");
+    return atob(normalized);
+  } catch {
+    return "";
+  }
+}
+
+function extractFrontmatterValue(text, key) {
+  const match = text.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
+  if (!match) return "";
+  return String(match[1] || "").trim().replace(/^['"]|['"]$/g, "");
+}
+
+async function listAllVenues(env) {
+  const token = getCmsGithubToken(env);
+  if (!token) return { ok: false, status: 500, message: "CMS GitHub token missing." };
+  const repo = getCmsRepo(env);
+  if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
+
+  const listRes = await githubRequest(
+    `/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(VENUES_FOLDER)}?ref=${CMS_STAGING_BRANCH}`,
+    token
+  );
+
+  if (!listRes.res.ok || !Array.isArray(listRes.data)) {
+    return { ok: false, status: listRes.res.status || 500, message: listRes.data?.message || "업체 목록 조회 실패" };
+  }
+
+  const files = listRes.data
+    .filter((item) => item?.type === "file" && String(item.name || "").endsWith(".md"))
+    .map((item) => ({ path: item.path, slug: String(item.name).replace(/\.md$/, "") }));
+
+  const items = [];
+  for (const file of files) {
+    const detail = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(file.path)}?ref=${CMS_STAGING_BRANCH}`, token);
+    if (!detail.res.ok) {
+      items.push({ slug: file.slug, title: file.slug, area: "", category: "" });
+      continue;
+    }
+    const content = decodeGithubContent(detail.data?.content || "");
+    items.push({
+      slug: file.slug,
+      title: extractFrontmatterValue(content, "title") || file.slug,
+      area: extractFrontmatterValue(content, "area"),
+      category: extractFrontmatterValue(content, "category"),
+    });
+  }
+
+  items.sort((a, b) => a.slug.localeCompare(b.slug));
+  return { ok: true, status: 200, total: items.length, items };
+}
+
 function oauthSuccessScript(url, token) {
   const content = {
     token,
@@ -507,6 +561,27 @@ export default {
       }
       const body = await request.json().catch(() => ({}));
       const result = await bulkDeleteVenues(env, body?.slugs || []);
+      return new Response(JSON.stringify(result), {
+        status: result.status,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+
+    if (url.pathname === "/admin/venues-list") {
+      if (request.method !== "GET") {
+        return new Response(JSON.stringify({ ok: false, message: "Method Not Allowed" }), {
+          status: 405,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const sessionValid = await isAdminSessionValid(request, env);
+      if (!sessionValid) {
+        return new Response(JSON.stringify({ ok: false, message: "Unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const result = await listAllVenues(env);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },

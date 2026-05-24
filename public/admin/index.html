@@ -26,6 +26,8 @@
           .cms-pending-summary{font-size:.9rem;color:#bcd0f1}
           .cms-pending-actions{display:flex;gap:8px;flex-wrap:wrap}
           .cms-pending-list{display:grid;gap:8px}
+          .cms-section-title{margin:14px 0 8px;color:#eaf1ff;font-size:1rem}
+          .cms-divider{height:1px;background:#2b3958;margin:12px 0}
           .cms-item{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px;border:1px solid #25334f;border-radius:10px;background:#0f182a}
           .cms-item-label{font-size:.9rem;color:#e3edff;word-break:break-all}
           .cms-item-meta{font-size:.78rem;color:#9fb4d7}
@@ -64,10 +66,17 @@
             <p class="cms-pending-summary" data-pending-summary>불러오는 중...</p>
             <div class="cms-pending-actions">
               <button type="button" class="cms-refresh-btn" data-pending-refresh>목록 새로고침</button>
-              <button type="button" class="cms-refresh-btn" data-pending-delete>선택 업체 일괄 삭제</button>
               <button type="button" class="cms-apply-btn" data-pending-apply>변경 적용</button>
             </div>
+            <h4 class="cms-section-title">적용 대기 변경 파일</h4>
             <div class="cms-pending-list" data-pending-list></div>
+            <div class="cms-divider"></div>
+            <div class="cms-pending-actions">
+              <button type="button" class="cms-refresh-btn" data-venues-refresh>등록 업체 목록 새로고침</button>
+              <button type="button" class="cms-refresh-btn" data-venues-delete>선택 업체 일괄 삭제</button>
+            </div>
+            <h4 class="cms-section-title">등록된 업체 목록 (전체)</h4>
+            <div class="cms-pending-list" data-venues-list></div>
           </div>
         `;
         document.body.appendChild(modal);
@@ -75,7 +84,9 @@
         const pendingSummary = modal.querySelector("[data-pending-summary]");
         const pendingList = modal.querySelector("[data-pending-list]");
         const pendingRefreshBtn = modal.querySelector("[data-pending-refresh]");
-        const pendingDeleteBtn = modal.querySelector("[data-pending-delete]");
+        const venuesList = modal.querySelector("[data-venues-list]");
+        const venuesRefreshBtn = modal.querySelector("[data-venues-refresh]");
+        const venuesDeleteBtn = modal.querySelector("[data-venues-delete]");
         const pendingApplyBtn = modal.querySelector("[data-pending-apply]");
         const pendingCloseBtn = modal.querySelector("[data-pending-close]");
 
@@ -126,6 +137,47 @@
           return data;
         };
 
+        const renderVenues = (data) => {
+          venuesList.innerHTML = "";
+          const items = Array.isArray(data?.items) ? data.items : [];
+          if (items.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "cms-empty";
+            empty.textContent = "등록된 업체가 없습니다.";
+            venuesList.appendChild(empty);
+            return;
+          }
+          items.forEach((item) => {
+            const row = document.createElement("label");
+            row.className = "cms-item";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.dataset.slug = item.slug || "";
+
+            const label = document.createElement("div");
+            label.className = "cms-item-label";
+            label.textContent = item.title || item.slug || "(untitled)";
+
+            const meta = document.createElement("div");
+            meta.className = "cms-item-meta";
+            meta.textContent = `${item.slug || "-"} · ${item.area || "-"} · ${item.category || "-"}`;
+
+            row.appendChild(checkbox);
+            row.appendChild(label);
+            row.appendChild(meta);
+            venuesList.appendChild(row);
+          });
+        };
+
+        const fetchVenues = async () => {
+          const res = await fetch("/admin/venues-list", { credentials: "include" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) throw new Error(data.message || "업체 목록 조회 실패");
+          renderVenues(data);
+          return data;
+        };
+
         const runApply = async () => {
           const res = await fetch("/admin/apply-changes", {
             method: "POST",
@@ -171,6 +223,7 @@
           modal.classList.add("is-open");
           try {
             await fetchPending();
+            await fetchVenues();
           } catch (error) {
             pendingSummary.textContent = error?.message || "대기 목록 조회 오류";
           }
@@ -184,6 +237,7 @@
         pendingRefreshBtn.addEventListener("click", async () => {
           try {
             await fetchPending();
+            await fetchVenues();
           } catch (error) {
             window.alert(error?.message || "목록 새로고침 실패");
           }
@@ -198,6 +252,7 @@
             const data = await runApply();
             window.alert(data.message || "변경 적용 완료");
             await fetchPending();
+            await fetchVenues();
           } catch (error) {
             window.alert(error?.message || "변경 적용 실패");
           } finally {
@@ -206,8 +261,16 @@
           }
         });
 
-        pendingDeleteBtn.addEventListener("click", async () => {
-          const selected = Array.from(pendingList.querySelectorAll('input[type="checkbox"][data-slug]:checked'))
+        venuesRefreshBtn.addEventListener("click", async () => {
+          try {
+            await fetchVenues();
+          } catch (error) {
+            window.alert(error?.message || "업체 목록 조회 실패");
+          }
+        });
+
+        venuesDeleteBtn.addEventListener("click", async () => {
+          const selected = Array.from(venuesList.querySelectorAll('input[type="checkbox"][data-slug]:checked'))
             .map((input) => input.dataset.slug)
             .filter(Boolean);
           if (selected.length === 0) {
@@ -216,17 +279,18 @@
           }
           const ok = window.confirm(`선택한 업체 ${selected.length}건을 삭제할까요?`);
           if (!ok) return;
-          pendingDeleteBtn.disabled = true;
-          pendingDeleteBtn.textContent = "삭제 중...";
+          venuesDeleteBtn.disabled = true;
+          venuesDeleteBtn.textContent = "삭제 중...";
           try {
             const data = await runBulkDelete(selected);
             window.alert(data.message || "삭제 완료");
             await fetchPending();
+            await fetchVenues();
           } catch (error) {
             window.alert(error?.message || "일괄 삭제 실패");
           } finally {
-            pendingDeleteBtn.disabled = false;
-            pendingDeleteBtn.textContent = "선택 업체 일괄 삭제";
+            venuesDeleteBtn.disabled = false;
+            venuesDeleteBtn.textContent = "선택 업체 일괄 삭제";
           }
         });
 
@@ -235,7 +299,7 @@
         wrap.appendChild(applyBtn);
         document.body.appendChild(wrap);
 
-        fetchPending().catch(() => {});
+        Promise.all([fetchPending(), fetchVenues()]).catch(() => {});
       })();
     </script>
   </body>
