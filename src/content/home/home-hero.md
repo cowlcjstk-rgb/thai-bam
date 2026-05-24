@@ -3,8 +3,6 @@ heroKicker: THAILAND NIGHT GUIDE
 heroTitle: 태국 KTV · 마사지· 클럽 가이드
 heroDescription: |-
   태국의 진짜 밤은 늦게 시작됩니다.
-  Thai Bam은 방콕, 파타야, 치앙마이의 KTV, 클럽, 스파, 라운지 등 
-  현지에서 많이 찾는 업소 분위기, 예약 문의, VIP 가이드 정보까지 한곳에서 확인할 수 있습니다.
 
   낮보다 화려한 태국의 밤,
   Thai Bam에서 시작하세요.
