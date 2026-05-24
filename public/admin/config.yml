@@ -1,7 +1,7 @@
 ﻿backend:
   name: github
   repo: cowlcjstk-rgb/thai-bam
-  branch: main
+  branch: cms-staging
   base_url: https://thai-bam.pages.dev
   auth_endpoint: oauth
   commit_messages:
@@ -16,7 +16,7 @@ display_url: https://thai-bam.pages.dev
 locale: ko
 media_folder: "public/uploads"
 public_folder: "/uploads"
-publish_mode: editorial_workflow
+publish_mode: simple
 show_preview_links: false
 
 editor:
@@ -177,6 +177,13 @@ collections:
         fields:
           - { label: 이미지, name: image, widget: image }
           - { label: 이미지 ALT, name: alt, widget: string, hint: "예: 파타야 스파 내부 테라피 룸" }
+      - label: "15-1. 상세 본문 이미지"
+        name: bodyImages
+        widget: list
+        required: false
+        fields:
+          - { label: 이미지, name: image, widget: image }
+          - { label: 이미지 ALT, name: alt, widget: string, hint: "예: 상세 본문 내 이미지 설명" }
       - { label: "16. 영업시간", name: openingHours, widget: string, required: false, hint: "예: 19:00-02:00" }
       - { label: "17. 가격대", name: priceRange, widget: text, required: false, hint: "여러 줄 입력 가능\n예시:\n1번 옵션은 1000바트\n2번 옵션은 2000바트\n3번 옵션은 3000바트" }
       - label: "18. 이용 순서 타임라인"
@@ -193,7 +200,7 @@ collections:
       - { label: "22. 경도(선택)", name: longitude, widget: number, required: false, value_type: float, hint: "정확한 핀 고정용 (예: 100.58403)" }
       - { label: "23. 카카오 문의 링크", name: kakaoUrl, widget: string, required: false }
       - { label: "24. 라인 문의 링크", name: lineUrl, widget: string, required: false }
-      - { label: "25. 상세 본문", name: body, widget: markdown, hint: "상세 안내 본문을 입력하세요. (지도는 본문 아래 자동 노출)" }
+      - { label: "25. 상세 본문", name: body, widget: markdown, hint: "상세 안내 본문을 입력하세요. 툴바 이미지 업로드 또는 아래 '상세 본문 이미지' 사용 가능" }
 
   - name: banners
     label: 배너 관리
@@ -233,7 +240,7 @@ collections:
           - { label: 카테고리 페이지 상단, value: category_top }
           - { label: 업체 상세 상단, value: venue_top }
           - { label: 업체 상세 하단, value: venue_bottom }
-      - { label: "3. 배너 이미지", name: image, widget: image }
+      - { label: "3. 배너 이미지", name: image, widget: image, hint: "gif/png/jpg/webp 업로드 가능 (GIF 애니메이션 지원)" }
       - { label: "4. 이미지 ALT", name: imageAlt, widget: string, hint: "예: 메인 상단 프로모션 배너 이미지" }
       - { label: "5. 배너 설명", name: description, widget: string, required: false }
       - { label: "6. 버튼 문구", name: buttonText, widget: string, required: false }
