@@ -16,7 +16,7 @@ display_url: https://thai-bam.pages.dev
 locale: ko
 media_folder: "public/uploads"
 public_folder: "/uploads"
-publish_mode: simple
+publish_mode: editorial_workflow
 show_preview_links: false
 
 editor:
@@ -105,10 +105,27 @@ collections:
     label: 업체 글 관리
     folder: src/content/venues
     create: true
+    delete: true
     slug: "{{fields.slug}}"
-    summary: "{{title}} - {{area}} / {{category}}"
+    summary: "[{{area}}/{{category}}] {{title}} · {{slug}}"
     editor:
       preview: false
+    view_groups:
+      - label: 지역별
+        field: area
+      - label: 카테고리별
+        field: category
+    view_filters:
+      - { label: "노출중", field: visible, pattern: true }
+      - { label: "숨김", field: visible, pattern: false }
+      - { label: "추천 노출", field: featured, pattern: true }
+      - { label: "방콕", field: area, pattern: bangkok }
+      - { label: "파타야", field: area, pattern: pattaya }
+      - { label: "치앙마이", field: area, pattern: chiang-mai }
+      - { label: "KTV", field: category, pattern: ktv-karaoke }
+      - { label: "스파", field: category, pattern: spa-massage }
+      - { label: "클럽", field: category, pattern: club-reservation }
+      - { label: "VIP", field: category, pattern: vip-guide }
     sortable_fields: [updatedAt, order, title, area, category]
     fields:
       - { label: "1. 업체명", name: title, widget: string }
@@ -182,10 +199,25 @@ collections:
     label: 배너 관리
     folder: src/content/banners
     create: true
+    delete: true
     slug: "{{fields.position}}-{{fields.title}}"
-    summary: "{{title}} ({{position}})"
+    summary: "[{{position}}] {{title}}"
     editor:
       preview: false
+    view_groups:
+      - label: 노출 위치별
+        field: position
+    view_filters:
+      - { label: "메인 히어로", field: position, pattern: home_hero }
+      - { label: "메인 상단", field: position, pattern: home_top }
+      - { label: "메인 중간", field: position, pattern: home_middle }
+      - { label: "메인 우측/모바일 하단", field: position, pattern: home_sidebar }
+      - { label: "지역 상단", field: position, pattern: area_top }
+      - { label: "카테고리 상단", field: position, pattern: category_top }
+      - { label: "업체 상단", field: position, pattern: venue_top }
+      - { label: "업체 하단", field: position, pattern: venue_bottom }
+      - { label: "노출중", field: visible, pattern: true }
+      - { label: "숨김", field: visible, pattern: false }
     sortable_fields: [order, title, position]
     fields:
       - { label: "1. 배너명", name: title, widget: string }
