@@ -75,6 +75,7 @@ const venues = defineCollection({
     thumbnailAlt: z.string(),
     thumbnailPosition: z.enum(['top', 'center', 'bottom']).default('center'),
     gallery: z.array(z.object({ image: z.string(), alt: z.string() })).default([]),
+    bodyImages: z.array(z.object({ image: z.string(), alt: z.string() })).default([]),
     usageSteps: z.array(z.object({
       title: z.string(),
       detail: z.string(),

@@ -262,6 +262,16 @@ const jsonLd = {
         <article class="venue-body">
           <Content />
         </article>
+        {venue.data.bodyImages?.length > 0 && (
+          <div class="body-image-grid">
+            {venue.data.bodyImages.map((item) => (
+              <figure class="body-image-item">
+                <img src={item.image} alt={item.alt} loading="lazy" width="1200" height="700" />
+                {item.alt && <figcaption>{item.alt}</figcaption>}
+              </figure>
+            ))}
+          </div>
+        )}
         {mapEmbedUrl && (
           <div class="map-embed">
             <iframe
@@ -792,6 +802,35 @@ const jsonLd = {
   .venue-body :global(li) {
     line-height: 1.8;
     color: #d7deef;
+  }
+
+  .body-image-grid {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .body-image-item {
+    margin: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0b0d13;
+  }
+
+  .body-image-item img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .body-image-item figcaption {
+    padding: 8px 10px;
+    font-size: 0.84rem;
+    color: #cfd7ea;
+    line-height: 1.5;
   }
 
   .related-grid {

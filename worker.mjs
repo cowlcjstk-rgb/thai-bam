@@ -10,6 +10,7 @@ const CMS_GITHUB_TOKEN_ENV_KEYS = ["GITHUB_CMS_TOKEN", "GITHUB_PAT", "GITHUB_ACC
 const CMS_STAGING_BRANCH = "cms-staging";
 const CMS_PRODUCTION_BRANCH = "main";
 const CMS_REPO_FALLBACK = "cowlcjstk-rgb/thai-bam";
+const VENUES_FOLDER = "src/content/venues";
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -208,6 +209,115 @@ async function applyCmsChanges(env) {
   return { ok: false, status: mergeResult.res.status || 500, message };
 }
 
+function mapCollectionFromPath(path) {
+  if (path.startsWith("src/content/venues/")) return "venues";
+  if (path.startsWith("src/content/banners/")) return "banners";
+  if (path.startsWith("src/content/home/")) return "home";
+  return "other";
+}
+
+function extractVenueSlugFromPath(path) {
+  const match = path.match(/^src\/content\/venues\/(.+)\.md$/);
+  return match ? match[1] : "";
+}
+
+async function getPendingChanges(env) {
+  const token = getCmsGithubToken(env);
+  if (!token) return { ok: false, status: 500, message: "CMS GitHub token missing." };
+  const repo = getCmsRepo(env);
+  if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
+
+  const compare = await githubRequest(
+    `/repos/${repo.owner}/${repo.repo}/compare/${CMS_PRODUCTION_BRANCH}...${CMS_STAGING_BRANCH}`,
+    token
+  );
+
+  if (!compare.res.ok) {
+    if (compare.res.status === 404) {
+      return { ok: true, status: 200, aheadBy: 0, totalFiles: 0, items: [] };
+    }
+    return { ok: false, status: compare.res.status || 500, message: compare.data?.message || "비교 조회 실패" };
+  }
+
+  const items = (compare.data?.files || []).map((file) => {
+    const collection = mapCollectionFromPath(file.filename || "");
+    return {
+      path: file.filename,
+      status: file.status,
+      collection,
+      venueSlug: collection === "venues" ? extractVenueSlugFromPath(file.filename) : "",
+    };
+  });
+
+  return {
+    ok: true,
+    status: 200,
+    aheadBy: compare.data?.ahead_by || 0,
+    totalFiles: items.length,
+    items,
+  };
+}
+
+function sanitizeSlugs(input) {
+  if (!Array.isArray(input)) return [];
+  const uniq = new Set();
+  for (const raw of input) {
+    const slug = String(raw || "").trim();
+    if (!slug) continue;
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) continue;
+    uniq.add(slug);
+  }
+  return Array.from(uniq);
+}
+
+async function deleteVenueBySlug(repo, token, slug) {
+  const path = `${VENUES_FOLDER}/${slug}.md`;
+  const lookup = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(path)}?ref=${CMS_STAGING_BRANCH}`, token);
+  if (lookup.res.status === 404) return { slug, ok: false, reason: "not_found" };
+  if (!lookup.res.ok || !lookup.data?.sha) return { slug, ok: false, reason: "lookup_failed" };
+
+  const del = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodeURIComponent(path)}`, token, {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      message: `cms(delete-bulk): venues ${slug}`,
+      sha: lookup.data.sha,
+      branch: CMS_STAGING_BRANCH,
+    }),
+  });
+
+  if (del.res.status === 200) return { slug, ok: true };
+  return { slug, ok: false, reason: del.data?.message || "delete_failed" };
+}
+
+async function bulkDeleteVenues(env, slugs) {
+  const token = getCmsGithubToken(env);
+  if (!token) return { ok: false, status: 500, message: "CMS GitHub token missing." };
+  const repo = getCmsRepo(env);
+  if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
+
+  const targets = sanitizeSlugs(slugs).slice(0, 200);
+  if (targets.length === 0) {
+    return { ok: false, status: 400, message: "삭제할 업체 slug가 없습니다." };
+  }
+
+  const results = [];
+  for (const slug of targets) {
+    results.push(await deleteVenueBySlug(repo, token, slug));
+  }
+
+  const deleted = results.filter((entry) => entry.ok).map((entry) => entry.slug);
+  const failed = results.filter((entry) => !entry.ok);
+
+  return {
+    ok: failed.length === 0,
+    status: failed.length === 0 ? 200 : 207,
+    message: failed.length === 0 ? `업체 ${deleted.length}건 삭제 완료` : `삭제 완료 ${deleted.length}건 / 실패 ${failed.length}건`,
+    deleted,
+    failed,
+  };
+}
+
 function oauthSuccessScript(url, token) {
   const content = {
     token,
@@ -354,6 +464,49 @@ export default {
       }
 
       const result = await applyCmsChanges(env);
+      return new Response(JSON.stringify(result), {
+        status: result.status,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+
+    if (url.pathname === "/admin/pending-changes") {
+      if (request.method !== "GET") {
+        return new Response(JSON.stringify({ ok: false, message: "Method Not Allowed" }), {
+          status: 405,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const sessionValid = await isAdminSessionValid(request, env);
+      if (!sessionValid) {
+        return new Response(JSON.stringify({ ok: false, message: "Unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const result = await getPendingChanges(env);
+      return new Response(JSON.stringify(result), {
+        status: result.status,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+
+    if (url.pathname === "/admin/bulk-delete-venues") {
+      if (request.method !== "POST") {
+        return new Response(JSON.stringify({ ok: false, message: "Method Not Allowed" }), {
+          status: 405,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const sessionValid = await isAdminSessionValid(request, env);
+      if (!sessionValid) {
+        return new Response(JSON.stringify({ ok: false, message: "Unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const body = await request.json().catch(() => ({}));
+      const result = await bulkDeleteVenues(env, body?.slugs || []);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
