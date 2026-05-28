@@ -11,6 +11,18 @@ const CMS_STAGING_BRANCH = "cms-staging";
 const CMS_PRODUCTION_BRANCH = "main";
 const CMS_REPO_FALLBACK = "cowlcjstk-rgb/thai-bam";
 const VENUES_FOLDER = "src/content/venues";
+const UPLOADS_FOLDER = "public/uploads";
+const MAX_BULK_UPLOAD_FILES = 30;
+const MAX_BULK_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MAX_BULK_UPLOAD_TOTAL_BYTES = 40 * 1024 * 1024;
+const ALLOWED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"]);
+const MIME_EXTENSION_MAP = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "image/avif": ".avif",
+};
 
 function html(body, status = 200, headers = {}) {
   return new Response(
@@ -253,6 +265,163 @@ function encodeGithubPath(path) {
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+}
+
+function getUploadTimestamp() {
+  return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
+}
+
+function getFileExtension(name, type) {
+  const lowerName = String(name || "").toLowerCase();
+  const match = lowerName.match(/\.[a-z0-9]+$/);
+  const ext = match ? match[0] : "";
+  if (ALLOWED_IMAGE_EXTENSIONS.has(ext)) return ext === ".jpeg" ? ".jpg" : ext;
+  const mapped = MIME_EXTENSION_MAP[String(type || "").toLowerCase()];
+  return mapped || "";
+}
+
+function sanitizeUploadBaseName(name, fallback) {
+  const raw = String(name || "")
+    .replace(/\.[^.]+$/, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/\.+/g, ".");
+  return raw && raw !== "." && raw !== ".." ? raw : fallback;
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function getBranchHead(repo, readTokens, writeTokens, branch) {
+  const ref = await githubReadWithFallback(`/repos/${repo.owner}/${repo.repo}/git/ref/heads/${branch}`, readTokens);
+  if (ref.res.ok && ref.data?.object?.sha) return ref.data.object.sha;
+  if (branch !== CMS_STAGING_BRANCH || ref.res.status !== 404) return "";
+
+  const mainRef = await githubReadWithFallback(`/repos/${repo.owner}/${repo.repo}/git/ref/heads/${CMS_PRODUCTION_BRANCH}`, readTokens);
+  const mainSha = mainRef.data?.object?.sha || "";
+  if (!mainRef.res.ok || !mainSha) return "";
+
+  const created = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/git/refs`, writeTokens, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ref: `refs/heads/${CMS_STAGING_BRANCH}`, sha: mainSha }),
+  });
+  return created.res.ok ? mainSha : "";
+}
+
+async function bulkUploadImages(env, request) {
+  const { read: readTokens, write: writeTokens } = getTokenCandidates(env, request);
+  if (writeTokens.length === 0) {
+    return { ok: false, status: 500, message: "이미지 업로드 권한 토큰이 없습니다. GITHUB_CMS_TOKEN 설정이 필요합니다." };
+  }
+
+  const repo = getCmsRepo(env);
+  if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
+
+  const formData = await request.formData().catch(() => null);
+  if (!formData) return { ok: false, status: 400, message: "업로드할 이미지를 읽지 못했습니다." };
+
+  const files = formData
+    .getAll("images")
+    .filter((file) => file && typeof file === "object" && typeof file.arrayBuffer === "function");
+
+  if (files.length === 0) return { ok: false, status: 400, message: "업로드할 이미지를 선택해 주세요." };
+  if (files.length > MAX_BULK_UPLOAD_FILES) {
+    return { ok: false, status: 400, message: `한 번에 최대 ${MAX_BULK_UPLOAD_FILES}개까지 업로드할 수 있습니다.` };
+  }
+
+  const totalBytes = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+  if (totalBytes > MAX_BULK_UPLOAD_TOTAL_BYTES) {
+    return { ok: false, status: 413, message: "한 번에 올리는 이미지 용량이 너무 큽니다." };
+  }
+
+  const headSha = await getBranchHead(repo, readTokens, writeTokens, CMS_STAGING_BRANCH);
+  if (!headSha) return { ok: false, status: 500, message: "staging 브랜치를 준비하지 못했습니다." };
+
+  const commit = await githubReadWithFallback(`/repos/${repo.owner}/${repo.repo}/git/commits/${headSha}`, readTokens);
+  const baseTree = commit.data?.tree?.sha || "";
+  if (!commit.res.ok || !baseTree) {
+    return { ok: false, status: commit.res.status || 500, message: formatGithubFailure("업로드 기준 조회", commit.res, commit.data) };
+  }
+
+  const stamp = getUploadTimestamp();
+  const tree = [];
+  const uploaded = [];
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    const ext = getFileExtension(file.name, file.type);
+    if (!ext) return { ok: false, status: 400, message: `${file.name || "이미지"} 파일 형식을 지원하지 않습니다.` };
+    if (Number(file.size || 0) > MAX_BULK_UPLOAD_BYTES) {
+      return { ok: false, status: 413, message: `${file.name || "이미지"} 파일 용량이 너무 큽니다. 파일당 최대 8MB입니다.` };
+    }
+
+    const baseName = sanitizeUploadBaseName(file.name, `image-${index + 1}`);
+    const sequence = String(index + 1).padStart(2, "0");
+    const path = `${UPLOADS_FOLDER}/${stamp}-${sequence}-${baseName}${ext}`;
+    const content = arrayBufferToBase64(await file.arrayBuffer());
+    const blob = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/git/blobs`, writeTokens, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content, encoding: "base64" }),
+    });
+
+    if (!blob.res.ok || !blob.data?.sha) {
+      return { ok: false, status: blob.res.status || 500, message: formatGithubFailure("이미지 업로드", blob.res, blob.data) };
+    }
+
+    tree.push({ path, mode: "100644", type: "blob", sha: blob.data.sha });
+    uploaded.push({ name: file.name || `${baseName}${ext}`, path, publicPath: `/${path.replace(/^public\//, "")}`, size: file.size || 0 });
+  }
+
+  const createdTree = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/git/trees`, writeTokens, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ base_tree: baseTree, tree }),
+  });
+  if (!createdTree.res.ok || !createdTree.data?.sha) {
+    return { ok: false, status: createdTree.res.status || 500, message: formatGithubFailure("이미지 묶음 생성", createdTree.res, createdTree.data) };
+  }
+
+  const createdCommit = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/git/commits`, writeTokens, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      message: `cms(media): bulk upload ${uploaded.length} images`,
+      tree: createdTree.data.sha,
+      parents: [headSha],
+    }),
+  });
+  if (!createdCommit.res.ok || !createdCommit.data?.sha) {
+    return { ok: false, status: createdCommit.res.status || 500, message: formatGithubFailure("이미지 커밋 생성", createdCommit.res, createdCommit.data) };
+  }
+
+  const updatedRef = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/git/refs/heads/${CMS_STAGING_BRANCH}`, writeTokens, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sha: createdCommit.data.sha }),
+  });
+  if (!updatedRef.res.ok) {
+    return { ok: false, status: updatedRef.res.status || 500, message: formatGithubFailure("이미지 업로드 반영", updatedRef.res, updatedRef.data) };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    message: `이미지 ${uploaded.length}개 업로드 완료`,
+    uploaded,
+    commit: createdCommit.data.sha,
+  };
 }
 
 async function applyCmsChanges(env, request) {
@@ -683,6 +852,27 @@ export default {
       }
       const body = await request.json().catch(() => ({}));
       const result = await bulkDeleteVenues(env, request, body?.slugs || []);
+      return new Response(JSON.stringify(result), {
+        status: result.status,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+
+    if (url.pathname === "/admin/bulk-upload-images") {
+      if (request.method !== "POST") {
+        return new Response(JSON.stringify({ ok: false, message: "Method Not Allowed" }), {
+          status: 405,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const sessionValid = await isAdminSessionValid(request, env);
+      if (!sessionValid) {
+        return new Response(JSON.stringify({ ok: false, message: "Unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      const result = await bulkUploadImages(env, request);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },

@@ -17,6 +17,8 @@
           .cms-apply-btn{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid #2f3d5c;background:#ff34ae;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.28)}
           .cms-apply-btn[disabled]{opacity:.6;cursor:not-allowed}
           .cms-refresh-btn{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid #3d4b67;background:#101726;color:#e8efff;font-weight:700;cursor:pointer}
+          .cms-upload-btn{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid #315b7d;background:#12344d;color:#eaf7ff;font-weight:700;cursor:pointer}
+          .cms-upload-btn[disabled]{opacity:.6;cursor:not-allowed}
           .cms-pending-btn{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid #304266;background:#122035;color:#e6efff;font-weight:700;cursor:pointer}
           .cms-pending-modal{position:fixed;inset:0;z-index:100000;background:rgba(2,6,16,.72);display:none;align-items:center;justify-content:center;padding:20px}
           .cms-pending-modal.is-open{display:flex}
@@ -62,6 +64,18 @@
         pendingBtn.type = "button";
         pendingBtn.className = "cms-pending-btn";
         pendingBtn.textContent = "변경대기중 확인";
+
+        const uploadBtn = document.createElement("button");
+        uploadBtn.type = "button";
+        uploadBtn.className = "cms-upload-btn";
+        uploadBtn.textContent = "이미지 일괄 업로드";
+
+        const uploadInput = document.createElement("input");
+        uploadInput.type = "file";
+        uploadInput.accept = "image/jpeg,image/png,image/gif,image/webp,image/avif";
+        uploadInput.multiple = true;
+        uploadInput.hidden = true;
+        document.body.appendChild(uploadInput);
 
         const modal = document.createElement("div");
         modal.className = "cms-pending-modal";
@@ -153,6 +167,7 @@
           applyBtn.disabled = !cmsWriteEnabled;
           pendingApplyBtn.disabled = !cmsWriteEnabled;
           venuesDeleteBtn.disabled = !cmsWriteEnabled;
+          uploadBtn.disabled = !cmsWriteEnabled;
           if (venueDeleteBtn) venueDeleteBtn.disabled = !cmsWriteEnabled || selectedVenueSlugs.size === 0 || !venueSelectMode;
         };
 
@@ -500,8 +515,9 @@
           return "";
         };
 
-        const buildCmsAuthHeaders = () => {
-          const headers = { "content-type": "application/json" };
+        const buildCmsAuthHeaders = (json = true) => {
+          const headers = {};
+          if (json) headers["content-type"] = "application/json";
           const token = getCmsUserToken();
           if (token) headers["x-cms-user-token"] = token;
           return headers;
@@ -528,6 +544,20 @@
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.ok) throw new Error(data.message || "일괄 삭제 실패");
+          return data;
+        };
+
+        const runBulkUploadImages = async (files) => {
+          const formData = new FormData();
+          files.forEach((file) => formData.append("images", file, file.name));
+          const res = await fetch("/admin/bulk-upload-images", {
+            method: "POST",
+            credentials: "include",
+            headers: buildCmsAuthHeaders(false),
+            body: formData,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok) throw new Error(data.message || "이미지 업로드 실패");
           return data;
         };
 
@@ -592,6 +622,39 @@
           await refreshAllLists();
         });
 
+        uploadBtn.addEventListener("click", () => {
+          if (!cmsWriteEnabled) {
+            window.alert("이미지 업로드 권한을 확인해 주세요.");
+            return;
+          }
+          uploadInput.click();
+        });
+
+        uploadInput.addEventListener("change", async () => {
+          const files = Array.from(uploadInput.files || []);
+          if (files.length === 0) return;
+          const ok = window.confirm(`선택한 이미지 ${files.length}개를 업로드할까요?`);
+          if (!ok) {
+            uploadInput.value = "";
+            return;
+          }
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = "업로드 중...";
+          try {
+            const data = await runBulkUploadImages(files);
+            const urls = (data.uploaded || []).map((item) => item.publicPath).slice(0, 10).join("\n");
+            const suffix = urls ? `\n\n${urls}` : "";
+            window.alert(`${data.message || "이미지 업로드 완료"}${suffix}`);
+            await refreshAllLists().catch(() => {});
+          } catch (error) {
+            window.alert(error?.message || "이미지 업로드 실패");
+          } finally {
+            uploadInput.value = "";
+            uploadBtn.textContent = "이미지 일괄 업로드";
+            syncWriteButtons();
+          }
+        });
+
         pendingCloseBtn.addEventListener("click", () => modal.classList.remove("is-open"));
         modal.addEventListener("click", (event) => {
           if (event.target === modal) modal.classList.remove("is-open");
@@ -651,6 +714,7 @@
         });
 
         wrap.appendChild(refreshBtn);
+        wrap.appendChild(uploadBtn);
         wrap.appendChild(pendingBtn);
         wrap.appendChild(applyBtn);
         document.body.appendChild(wrap);
