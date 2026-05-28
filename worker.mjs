@@ -170,31 +170,12 @@ function getCmsRepo(env) {
   return { owner, repo };
 }
 
-function getUserTokenFromRequest(request) {
-  const token = String(request.headers.get("x-cms-user-token") || "").trim();
-  if (!token) return "";
-  if (token.length < 20 || token.length > 1024) return "";
-  return token;
-}
-
-function getTokenCandidates(env, request) {
+function getServerTokenCandidates(env) {
   const envToken = getCmsGithubToken(env);
-  const userToken = getUserTokenFromRequest(request);
-  const write = [];
-  const read = [];
-
-  const pushUnique = (arr, value) => {
-    if (!value) return;
-    if (!arr.includes(value)) arr.push(value);
+  return {
+    read: envToken ? [envToken, ""] : [""],
+    write: envToken ? [envToken] : [],
   };
-
-  pushUnique(write, envToken);
-  pushUnique(write, userToken);
-  pushUnique(read, envToken);
-  pushUnique(read, userToken);
-  read.push("");
-
-  return { read, write };
 }
 
 function isAuthRetryStatus(status) {
@@ -320,9 +301,9 @@ async function getBranchHead(repo, readTokens, writeTokens, branch) {
 }
 
 async function bulkUploadImages(env, request) {
-  const { read: readTokens, write: writeTokens } = getTokenCandidates(env, request);
+  const { read: readTokens, write: writeTokens } = getServerTokenCandidates(env);
   if (writeTokens.length === 0) {
-    return { ok: false, status: 500, message: "이미지 업로드 권한 토큰이 없습니다. GITHUB_CMS_TOKEN 설정이 필요합니다." };
+    return { ok: false, status: 500, message: "서버 업로드 권한 토큰이 없습니다. Cloudflare의 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   }
 
   const repo = getCmsRepo(env);
@@ -424,14 +405,71 @@ async function bulkUploadImages(env, request) {
   };
 }
 
-async function applyCmsChanges(env, request) {
-  const tokens = getTokenCandidates(env, request).write;
+async function applyCmsChanges(env) {
+  const { read: readTokens, write: writeTokens } = getServerTokenCandidates(env);
+  const tokens = writeTokens;
   if (tokens.length === 0) {
-    return { ok: false, status: 500, message: "적용 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
+    return { ok: false, status: 500, message: "서버 적용 권한 토큰이 없습니다. Cloudflare의 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   }
   const repo = getCmsRepo(env);
   if (!repo) {
     return { ok: false, status: 500, message: "CMS repo setting invalid." };
+  }
+
+  const compare = await githubReadWithFallback(
+    `/repos/${repo.owner}/${repo.repo}/compare/${CMS_PRODUCTION_BRANCH}...${CMS_STAGING_BRANCH}`,
+    readTokens
+  );
+
+  if (compare.res.status === 404) {
+    return { ok: false, status: 404, message: "staging 브랜치를 찾지 못했습니다. 먼저 관리자에서 글 저장을 한 번 진행해 주세요." };
+  }
+
+  if (!compare.res.ok) {
+    return {
+      ok: false,
+      status: compare.res.status || 500,
+      message: formatGithubFailure("변경 비교", compare.res, compare.data),
+    };
+  }
+
+  if (Number(compare.data?.ahead_by || 0) === 0) {
+    return {
+      ok: true,
+      status: 200,
+      message: "적용할 변경사항이 없습니다.",
+      sha: compare.data?.base_commit?.sha || "",
+    };
+  }
+
+  const stagingHeadSha = await getBranchHead(repo, readTokens, tokens, CMS_STAGING_BRANCH);
+  if (!stagingHeadSha) {
+    return { ok: false, status: 500, message: "staging 브랜치 상태를 확인하지 못했습니다." };
+  }
+
+  if (Number(compare.data?.behind_by || 0) === 0) {
+    const fastForward = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/git/refs/heads/${CMS_PRODUCTION_BRANCH}`, tokens, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sha: stagingHeadSha, force: false }),
+    });
+
+    if (fastForward.res.ok) {
+      return {
+        ok: true,
+        status: 200,
+        message: "변경 적용 완료. 배포가 곧 시작됩니다.",
+        sha: stagingHeadSha,
+      };
+    }
+
+    if (![403, 409, 422].includes(Number(fastForward.res.status || 0))) {
+      return {
+        ok: false,
+        status: fastForward.res.status || 500,
+        message: formatGithubFailure("변경 적용", fastForward.res, fastForward.data),
+      };
+    }
   }
 
   const mergeResult = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/merges`, tokens, {
@@ -480,8 +518,8 @@ function extractVenueSlugFromPath(path) {
   return match ? match[1] : "";
 }
 
-async function getPendingChanges(env, request) {
-  const readTokens = getTokenCandidates(env, request).read;
+async function getPendingChanges(env) {
+  const readTokens = getServerTokenCandidates(env).read;
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -553,9 +591,9 @@ async function deleteVenueBySlug(repo, tokens, slug) {
   return { slug, ok: false, reason: del.data?.message || "delete_failed" };
 }
 
-async function bulkDeleteVenues(env, request, slugs) {
-  const tokens = getTokenCandidates(env, request).write;
-  if (tokens.length === 0) return { ok: false, status: 500, message: "삭제 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
+async function bulkDeleteVenues(env, slugs) {
+  const tokens = getServerTokenCandidates(env).write;
+  if (tokens.length === 0) return { ok: false, status: 500, message: "서버 삭제 권한 토큰이 없습니다. Cloudflare의 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -601,8 +639,8 @@ function extractFrontmatterValue(text, key) {
   return String(match[1] || "").trim().replace(/^['"]|['"]$/g, "");
 }
 
-async function listAllVenues(env, request) {
-  const readTokens = getTokenCandidates(env, request).read;
+async function listAllVenues(env) {
+  const readTokens = getServerTokenCandidates(env).read;
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -651,15 +689,41 @@ async function listAllVenues(env, request) {
   return { ok: true, status: 200, total: items.length, items };
 }
 
-function getCmsHealth(env) {
+async function getCmsHealth(env) {
   const repo = getCmsRepo(env);
-  return {
+  const result = {
     ok: true,
     status: 200,
     tokenPresent: Boolean(getCmsGithubToken(env)),
+    tokenValid: false,
+    writeEnabled: false,
     repo: repo ? `${repo.owner}/${repo.repo}` : "",
     stagingBranch: CMS_STAGING_BRANCH,
     productionBranch: CMS_PRODUCTION_BRANCH,
+  };
+
+  if (!repo) {
+    return { ...result, ok: false, status: 500, message: "CMS repo setting invalid." };
+  }
+
+  const token = getCmsGithubToken(env);
+  if (!token) return result;
+
+  const probe = await githubRequest(`/repos/${repo.owner}/${repo.repo}`, token);
+  if (!probe.res.ok) {
+    return {
+      ...result,
+      warning: formatGithubFailure("서버 GitHub 토큰 확인", probe.res, probe.data),
+    };
+  }
+
+  const permissions = probe.data?.permissions || {};
+  const writeEnabled = Boolean(permissions.admin || permissions.maintain || permissions.push);
+  return {
+    ...result,
+    tokenValid: true,
+    writeEnabled,
+    warning: writeEnabled ? "" : "서버 GitHub 토큰에 저장소 쓰기 권한이 없습니다.",
   };
 }
 
@@ -808,7 +872,7 @@ export default {
         });
       }
 
-      const result = await applyCmsChanges(env, request);
+      const result = await applyCmsChanges(env);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -829,7 +893,7 @@ export default {
           headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
         });
       }
-      const result = await getPendingChanges(env, request);
+      const result = await getPendingChanges(env);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -851,7 +915,7 @@ export default {
         });
       }
       const body = await request.json().catch(() => ({}));
-      const result = await bulkDeleteVenues(env, request, body?.slugs || []);
+      const result = await bulkDeleteVenues(env, body?.slugs || []);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -893,7 +957,7 @@ export default {
           headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
         });
       }
-      const result = await listAllVenues(env, request);
+      const result = await listAllVenues(env);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -914,7 +978,7 @@ export default {
           headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
         });
       }
-      const result = getCmsHealth(env);
+      const result = await getCmsHealth(env);
       return new Response(JSON.stringify(result), {
         status: result.status,
         headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
