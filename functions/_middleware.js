@@ -165,21 +165,57 @@ function getUserTokenFromRequest(request) {
   return token;
 }
 
-function resolveCmsReadToken(env, request) {
-  return getUserTokenFromRequest(request) || getCmsGithubToken(env) || "";
+function getTokenCandidates(env, request) {
+  const envToken = getCmsGithubToken(env);
+  const userToken = getUserTokenFromRequest(request);
+  const write = [];
+  const read = [];
+
+  const pushUnique = (arr, value) => {
+    if (!value) return;
+    if (!arr.includes(value)) arr.push(value);
+  };
+
+  pushUnique(write, envToken);
+  pushUnique(write, userToken);
+  pushUnique(read, envToken);
+  pushUnique(read, userToken);
+  read.push("");
+
+  return { read, write };
 }
 
-function resolveCmsWriteToken(env, request) {
-  return getUserTokenFromRequest(request) || getCmsGithubToken(env) || "";
+function isAuthRetryStatus(status) {
+  return status === 401 || status === 403 || status === 404;
 }
 
-async function githubReadWithFallback(path, token) {
-  const first = await githubRequest(path, token);
-  if (first.res.ok) return first;
-  if (token && (first.res.status === 401 || first.res.status === 403)) {
-    return githubRequest(path, "");
+async function githubReadWithFallback(path, tokens) {
+  const candidates = Array.isArray(tokens) ? tokens : [String(tokens || ""), ""];
+  let last = null;
+
+  for (const token of candidates) {
+    const current = await githubRequest(path, token);
+    if (current.res.ok) return current;
+    last = current;
+    if (!isAuthRetryStatus(current.res.status)) return current;
   }
-  return first;
+
+  return last || githubRequest(path, "");
+}
+
+async function githubWriteWithFallback(path, tokens, init = {}) {
+  const candidates = Array.isArray(tokens) ? tokens : [String(tokens || "")];
+  let last = null;
+
+  for (const token of candidates) {
+    if (!token) continue;
+    const current = await githubRequest(path, token, init);
+    if (current.res.ok) return current;
+    last = current;
+    if (!isAuthRetryStatus(current.res.status)) return current;
+  }
+
+  return last || { res: { ok: false, status: 500 }, data: { message: "No valid write token available." } };
 }
 
 function formatGithubFailure(action, res, data) {
@@ -199,6 +235,7 @@ async function githubRequest(path, token, init = {}) {
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "thai-bam-cms",
     ...(init.headers || {}),
   };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -219,8 +256,8 @@ function encodeGithubPath(path) {
 }
 
 async function applyCmsChanges(env, request) {
-  const token = resolveCmsWriteToken(env, request);
-  if (!token) {
+  const tokens = getTokenCandidates(env, request).write;
+  if (tokens.length === 0) {
     return { ok: false, status: 500, message: "적용 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   }
   const repo = getCmsRepo(env);
@@ -228,7 +265,7 @@ async function applyCmsChanges(env, request) {
     return { ok: false, status: 500, message: "CMS repo setting invalid." };
   }
 
-  const mergeResult = await githubRequest(`/repos/${repo.owner}/${repo.repo}/merges`, token, {
+  const mergeResult = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/merges`, tokens, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -275,13 +312,13 @@ function extractVenueSlugFromPath(path) {
 }
 
 async function getPendingChanges(env, request) {
-  const token = resolveCmsReadToken(env, request);
+  const readTokens = getTokenCandidates(env, request).read;
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
   const compare = await githubReadWithFallback(
     `/repos/${repo.owner}/${repo.repo}/compare/${CMS_PRODUCTION_BRANCH}...${CMS_STAGING_BRANCH}`,
-    token
+    readTokens
   );
 
   if (!compare.res.ok) {
@@ -326,14 +363,14 @@ function sanitizeSlugs(input) {
   return Array.from(uniq);
 }
 
-async function deleteVenueBySlug(repo, token, slug) {
+async function deleteVenueBySlug(repo, tokens, slug) {
   const path = `${VENUES_FOLDER}/${slug}.md`;
   const encodedPath = encodeGithubPath(path);
-  const lookup = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodedPath}?ref=${CMS_STAGING_BRANCH}`, token);
+  const lookup = await githubReadWithFallback(`/repos/${repo.owner}/${repo.repo}/contents/${encodedPath}?ref=${CMS_STAGING_BRANCH}`, tokens);
   if (lookup.res.status === 404) return { slug, ok: false, reason: "not_found" };
   if (!lookup.res.ok || !lookup.data?.sha) return { slug, ok: false, reason: "lookup_failed" };
 
-  const del = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${encodedPath}`, token, {
+  const del = await githubWriteWithFallback(`/repos/${repo.owner}/${repo.repo}/contents/${encodedPath}`, tokens, {
     method: "DELETE",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -348,8 +385,8 @@ async function deleteVenueBySlug(repo, token, slug) {
 }
 
 async function bulkDeleteVenues(env, request, slugs) {
-  const token = resolveCmsWriteToken(env, request);
-  if (!token) return { ok: false, status: 500, message: "삭제 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
+  const tokens = getTokenCandidates(env, request).write;
+  if (tokens.length === 0) return { ok: false, status: 500, message: "삭제 권한 토큰이 없습니다. 관리자 재로그인 또는 GITHUB_CMS_TOKEN 설정이 필요합니다." };
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
@@ -360,7 +397,7 @@ async function bulkDeleteVenues(env, request, slugs) {
 
   const results = [];
   for (const slug of targets) {
-    results.push(await deleteVenueBySlug(repo, token, slug));
+    results.push(await deleteVenueBySlug(repo, tokens, slug));
   }
 
   const deleted = results.filter((entry) => entry.ok).map((entry) => entry.slug);
@@ -378,7 +415,12 @@ async function bulkDeleteVenues(env, request, slugs) {
 function decodeGithubContent(base64) {
   try {
     const normalized = String(base64 || "").replace(/\n/g, "");
-    return atob(normalized);
+    const binary = atob(normalized);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder("utf-8").decode(bytes);
   } catch {
     return "";
   }
@@ -391,14 +433,17 @@ function extractFrontmatterValue(text, key) {
 }
 
 async function listAllVenues(env, request) {
-  const token = resolveCmsReadToken(env, request);
+  const readTokens = getTokenCandidates(env, request).read;
   const repo = getCmsRepo(env);
   if (!repo) return { ok: false, status: 500, message: "CMS repo setting invalid." };
 
-  const listRes = await githubReadWithFallback(
-    `/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(VENUES_FOLDER)}?ref=${CMS_STAGING_BRANCH}`,
-    token
-  );
+  let ref = CMS_STAGING_BRANCH;
+  let listRes = await githubReadWithFallback(`/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(VENUES_FOLDER)}?ref=${ref}`, readTokens);
+
+  if (listRes.res.status === 404) {
+    ref = CMS_PRODUCTION_BRANCH;
+    listRes = await githubReadWithFallback(`/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(VENUES_FOLDER)}?ref=${ref}`, readTokens);
+  }
 
   if (!listRes.res.ok || !Array.isArray(listRes.data)) {
     return {
@@ -408,11 +453,32 @@ async function listAllVenues(env, request) {
     };
   }
 
-  const files = listRes.data
-    .filter((item) => item?.type === "file" && String(item.name || "").endsWith(".md"))
-    .map((item) => ({ slug: String(item.name).replace(/\.md$/, ""), title: String(item.name).replace(/\.md$/, ""), area: "", category: "" }));
+  const files = listRes.data.filter((item) => item?.type === "file" && String(item.name || "").endsWith(".md"));
+  const items = [];
 
-  const items = files.sort((a, b) => a.slug.localeCompare(b.slug));
+  for (const file of files) {
+    const slug = String(file.name || "").replace(/\.md$/, "");
+    const filePath = `${VENUES_FOLDER}/${file.name}`;
+    const fileRes = await githubReadWithFallback(
+      `/repos/${repo.owner}/${repo.repo}/contents/${encodeGithubPath(filePath)}?ref=${ref}`,
+      readTokens
+    );
+
+    let title = slug;
+    let area = "";
+    let category = "";
+
+    if (fileRes.res.ok && fileRes.data?.content) {
+      const text = decodeGithubContent(fileRes.data.content);
+      title = extractFrontmatterValue(text, "title") || slug;
+      area = extractFrontmatterValue(text, "area");
+      category = extractFrontmatterValue(text, "category");
+    }
+
+    items.push({ slug, title, area, category });
+  }
+
+  items.sort((a, b) => a.slug.localeCompare(b.slug));
   return { ok: true, status: 200, total: items.length, items };
 }
 
