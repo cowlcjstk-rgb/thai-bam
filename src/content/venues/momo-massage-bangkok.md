@@ -16,14 +16,8 @@ seoDescription: Bangkok Thonglor premium Japanese-style massage salon offering
 thumbnail: /uploads/00-momo-25-1024x683-1-.jpg
 thumbnailAlt: 마사지 정문
 thumbnailPosition: center
-gallery:
-  - image: /uploads/123_1.jpg
-    alt: 모모아가씨
-  - image: /uploads/123_2.jpg
-    alt: 소피마사지
-bodyImages:
-  - image: /uploads/_19-5-2026_102144_momothonglor.com.jpeg
-    alt: 에이스 아가씨
+gallery: []
+bodyImages: []
 openingHours: 매일 12:00 ~ 24:00 (Last Entry 23:00) / 연중무휴
 priceRange: >-
   스탠다드(LOTION MASSAGE / HJ / BJ / FULL SERVICED) 40분 2,200 60분 2,500 90분 3,000
@@ -40,8 +34,6 @@ MOMO Thonglor는 통로 라인에서도 전체적으로 아가씨 풀이 상당�
 
 이곳의 핵심은 역시 NURU 프로그램과 VIP 룸 시스템이다. VIP 업그레이드 시 자쿠지 이용이 가능하며 욕조 안에서 추가적인 밀착 케어가 들어가는 점이 특징이다. 특히 MOMO의 누루 코스는 일반 오일 수준이 아니라 에어매트 위에서 진행되는 바디 밀착형 스타일이라 몸타기 퍼포먼스를 선호하는 사람들에게 만족도가 높은 편이다. 통로권에서 시설, 아가씨 수급, 누루 퀄리티까지 전체 밸런스가 좋은 업장으로 평가받는 편이며 2 LADY나 OUTCALL까지 운영해 선택 폭도 넓은 편이다.
 
-
-
 ![]()
 
-![마사지 므흣](/uploads/123_1.jpg)
+![마사지 므흣](/uploads/vertical_stack_20260527_194747.png)
