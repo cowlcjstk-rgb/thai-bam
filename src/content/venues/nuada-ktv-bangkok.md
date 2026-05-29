@@ -50,4 +50,4 @@ googleMapUrl: https://maps.app.goo.gl/yCU5PtToNuUU3R5W7
 
 ![누아다 술가격](/uploads/vertical_stack_20260529_102030.png "누아다 오픈 가격")
 
-![누아다 아가씨들](/uploads/vertical_stack_20260527_204533.png "누아다 에이스들")
+![누아다 아가씨들](/uploads/vertical_stack_20260527_204533.jpg "누아다 에이스들")
