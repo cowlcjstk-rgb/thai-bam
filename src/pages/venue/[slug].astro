@@ -249,7 +249,7 @@ const jsonLd = {
         </div>
       </section>
 
-      <section id="venue-inquiry" class="section-block reveal">
+      <section id="venue-inquiry" class="section-block">
         <h2>상세 안내</h2>
         {venue.data.introBody && <p class="intro-body">{venue.data.introBody}</p>}
         {normalizedPriceText && (
@@ -489,7 +489,7 @@ const jsonLd = {
           }
         });
       },
-      { threshold: 0.16 }
+      { threshold: 0.01 }
     );
 
     reveals.forEach((element) => observer.observe(element));
