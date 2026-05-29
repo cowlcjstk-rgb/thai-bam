@@ -23,13 +23,15 @@ const run = (cmd, args, input) => {
   }
 };
 
+const wrangler = ['wrangler', '--config', 'wrangler.worker.toml'];
+
 if (cmsToken) {
-  run('npx', ['wrangler', 'secret', 'put', 'GITHUB_CMS_TOKEN'], `${cmsToken}\n`);
+  run('npx', [...wrangler, 'secret', 'put', 'GITHUB_CMS_TOKEN'], `${cmsToken}\n`);
 }
 
 if (hasOauthId && hasOauthSecret) {
-  run('npx', ['wrangler', 'secret', 'put', 'GITHUB_OAUTH_CLIENT_ID'], `${process.env.GITHUB_OAUTH_CLIENT_ID}\n`);
-  run('npx', ['wrangler', 'secret', 'put', 'GITHUB_OAUTH_CLIENT_SECRET'], `${process.env.GITHUB_OAUTH_CLIENT_SECRET}\n`);
+  run('npx', [...wrangler, 'secret', 'put', 'GITHUB_OAUTH_CLIENT_ID'], `${process.env.GITHUB_OAUTH_CLIENT_ID}\n`);
+  run('npx', [...wrangler, 'secret', 'put', 'GITHUB_OAUTH_CLIENT_SECRET'], `${process.env.GITHUB_OAUTH_CLIENT_SECRET}\n`);
 }
 
-run('npx', ['wrangler', 'deploy']);
+run('npx', [...wrangler, 'deploy']);
