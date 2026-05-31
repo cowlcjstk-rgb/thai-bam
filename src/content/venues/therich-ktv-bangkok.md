@@ -4,7 +4,7 @@ slug: therich-ktv-bangkok
 area: bangkok
 category: ktv-karaoke
 visible: true
-featured: false
+featured: true
 order: 3
 updatedAt: 2026-05-31T22:00:00.000+09:00
 shortDescription: >-
