@@ -41,8 +41,14 @@ const getThumbPosition = (position) => {
   return 'center center';
 };
 const heroImagePosition = getThumbPosition(venue.data.thumbnailPosition);
+const normalizeMultilineText = (value = '') => String(value ?? '').replace(/\\n/g, '\n').replace(/\r\n/g, '\n').trim();
+const toTextBlocks = (value = '') =>
+  normalizeMultilineText(value)
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
 const priceText = venue.data.priceRange?.trim() ?? '';
-const normalizedPriceText = priceText.replace(/\\n/g, '\n');
+const normalizedPriceText = normalizeMultilineText(priceText);
 const priceFallback = '문의 후 안내';
 const priceLines = normalizedPriceText
   ? normalizedPriceText
@@ -52,6 +58,18 @@ const priceLines = normalizedPriceText
   : [];
 const hasLongPriceText = priceLines.length >= 2;
 const priceSummary = normalizedPriceText || priceFallback;
+const introBodyText = normalizeMultilineText(venue.data.introBody || venue.data.shortDescription || '');
+const introBlocks = toTextBlocks(introBodyText);
+const priceBlocks = toTextBlocks(normalizedPriceText);
+const addressText = normalizeMultilineText(venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.');
+const cleanInlineText = (value = '') => normalizeMultilineText(value).replace(/\s+/g, ' ').trim();
+const truncateText = (value = '', max = 34) => {
+  const text = cleanInlineText(value);
+  return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+};
+const pricePreviewText = priceLines.slice(0, 2).join('\n') || priceFallback;
+const openingHoursText = venue.data.openingHours ?? '문의 시 안내';
+const openingCompactText = truncateText(openingHoursText.split('/')[0], 18);
 
 const extractCoords = (raw) => {
   if (!raw) return undefined;
@@ -164,6 +182,7 @@ const galleryItems = [
   dedupe.add(item.image);
   return true;
 });
+const hasMultipleGallery = galleryItems.length > 1;
 
 const { Content } = await venue.render();
 
@@ -186,45 +205,72 @@ const jsonLd = {
 <BaseLayout title={venue.data.seoTitle} description={venue.data.seoDescription}>
   <JsonLd data={jsonLd} />
 
-  <section class="venue-hero reveal">
-    <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1400" height="820" loading="eager" style={`object-position:${heroImagePosition};`} />
-    <div class="hero-overlay">
-      <p>{area?.data.name ?? venue.data.area} · {category?.data.name ?? venue.data.category}</p>
-      <h1>{venue.data.title}</h1>
-      <p class="hero-lead">{venue.data.shortDescription}</p>
-    </div>
-  </section>
+  <div class="venue-lead-grid">
+    <section class="venue-hero reveal">
+      <img src={venue.data.thumbnail} alt={venue.data.thumbnailAlt} width="1400" height="820" loading="eager" style={`object-position:${heroImagePosition};`} />
+      <div class="hero-overlay">
+        <p>{area?.data.name ?? venue.data.area} · {category?.data.name ?? venue.data.category}</p>
+        <h1>{venue.data.title}</h1>
+        <p class="hero-lead">{venue.data.shortDescription}</p>
+      </div>
+    </section>
 
-  <section class="venue-core-sticky reveal" data-core-sticky>
-    <div class="core-card">
-      <span>지역</span>
-      <strong>{area?.data.name ?? venue.data.area}</strong>
-    </div>
-    <div class="core-card">
-      <span>영업시간</span>
-      <strong>{venue.data.openingHours ?? '문의 시 안내'}</strong>
-    </div>
-    <div class="core-card">
-      <span>가격대</span>
-      <strong class:list={['price-summary', hasLongPriceText && 'is-collapsible']} data-price-summary>{priceSummary}</strong>
-      {hasLongPriceText && (
-        <button type="button" class="price-toggle" data-price-toggle aria-expanded="true">
-          접기
-        </button>
-      )}
-    </div>
-  </section>
+    <section class="venue-core-sticky reveal" data-core-sticky>
+      <div class="core-card">
+        <span>지역</span>
+        <strong>{area?.data.name ?? venue.data.area}</strong>
+      </div>
+      <div class="core-card">
+        <span>영업시간</span>
+        <strong data-core-hours data-full-text={openingHoursText} data-compact-text={openingCompactText}>{openingHoursText}</strong>
+      </div>
+      <div class="core-card core-price-card">
+        <span>가격대</span>
+        <strong
+          class:list={['price-summary', hasLongPriceText && 'is-collapsible']}
+          data-price-summary
+          data-price-preview={pricePreviewText}
+          data-price-full={priceSummary}
+          data-price-compact="가격 보기"
+        >
+          {pricePreviewText}
+        </strong>
+        {hasLongPriceText && (
+          <button type="button" class="price-toggle" data-price-toggle aria-expanded="false">
+            가격 전체 보기
+          </button>
+        )}
+      </div>
+      <div class="desktop-action-card">
+        <span>문의</span>
+        <strong>가능한 채널로 바로 확인</strong>
+        <div class="desktop-action-grid">
+          {venue.data.kakaoUrl ? (
+            <a class="desktop-action kakao" href={venue.data.kakaoUrl} target="_blank" rel="nofollow noopener noreferrer">카카오톡</a>
+          ) : (
+            <button class="desktop-action kakao" type="button" disabled>카카오 준비중</button>
+          )}
+          {venue.data.lineUrl ? (
+            <a class="desktop-action line" href={venue.data.lineUrl} target="_blank" rel="nofollow noopener noreferrer">라인</a>
+          ) : (
+            <button class="desktop-action line" type="button" disabled>라인 준비중</button>
+          )}
+          <a class="desktop-action inquiry" href="#venue-inquiry">상세 안내</a>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <BannerSlot position="venue_top" />
 
   <section class="venue-grid">
     <div class="venue-main">
-      <section class="section-block reveal">
+      <section id="venue-gallery" class="section-block gallery-block reveal">
         <h2>갤러리</h2>
-        <div class="gallery-shell">
-          <button class="gallery-nav" data-gallery-prev type="button" aria-label="이전 이미지">‹</button>
+        <div class:list={['gallery-shell', !hasMultipleGallery && 'is-single']}>
+          {hasMultipleGallery && <button class="gallery-nav" data-gallery-prev type="button" aria-label="이전 이미지">‹</button>}
 
-          <div class="gallery-track" data-gallery-track>
+          <div class:list={['gallery-track', hasMultipleGallery && 'has-multiple']} data-gallery-track>
             {galleryItems.map((item, index) => (
               <button class="gallery-slide" data-gallery-slide type="button" data-lightbox-open={index}>
                 <img
@@ -239,26 +285,43 @@ const jsonLd = {
             ))}
           </div>
 
-          <button class="gallery-nav" data-gallery-next type="button" aria-label="다음 이미지">›</button>
+          {hasMultipleGallery && <button class="gallery-nav" data-gallery-next type="button" aria-label="다음 이미지">›</button>}
         </div>
 
-        <div class="gallery-dots">
-          {galleryItems.map((_, index) => (
-            <button type="button" class="gallery-dot" data-gallery-dot={index} aria-label={`이미지 ${index + 1}`}></button>
-          ))}
-        </div>
+        {hasMultipleGallery && (
+          <div class="gallery-dots">
+            {galleryItems.map((_, index) => (
+              <button type="button" class="gallery-dot" data-gallery-dot={index} aria-label={`이미지 ${index + 1}`}></button>
+            ))}
+          </div>
+        )}
       </section>
 
       <section id="venue-inquiry" class="section-block">
         <h2>상세 안내</h2>
-        {venue.data.introBody && <p class="intro-body">{venue.data.introBody}</p>}
-        {normalizedPriceText && (
-          <div class="price-box">
-            <h3>가격대 안내</h3>
-            <p>{normalizedPriceText}</p>
+        {introBlocks.length > 0 && (
+          <div class="intro-body">
+            {introBlocks.map((block, index) => (
+              <p class:list={['intro-body-block', index === 0 && 'is-lead']}>{block}</p>
+            ))}
           </div>
         )}
-        <p class="location-text">{venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.'}</p>
+        {normalizedPriceText && (
+          <div id="price-detail" class="price-box">
+            <h3>가격대 안내</h3>
+            <div class="price-list">
+              {(priceBlocks.length > 0 ? priceBlocks : [normalizedPriceText]).map((block) => (
+                <p>{block}</p>
+              ))}
+            </div>
+          </div>
+        )}
+        {addressText && (
+          <div id="location-detail" class="location-card">
+            <h3>위치 안내</h3>
+            <p>{addressText}</p>
+          </div>
+        )}
         <article class="venue-body">
           <Content />
         </article>
@@ -290,7 +353,7 @@ const jsonLd = {
         )}
       </section>
 
-      <section class="section-block reveal">
+      <section id="venue-flow" class="section-block reveal">
         <h2>이용 순서</h2>
         <ol class="timeline">
           {timelineSteps.map((step, index) => (
@@ -307,6 +370,35 @@ const jsonLd = {
 
       <ContactInquiryBanner kakaoUrl={venue.data.kakaoUrl} lineUrl={venue.data.lineUrl} inquiryHref="#venue-inquiry" />
     </div>
+
+    <aside class="venue-side reveal" aria-label="데스크톱 빠른 메뉴">
+      <div class="side-card side-contact">
+        <p class="side-kicker">빠른 확인</p>
+        <h2>문의 전 핵심 정보</h2>
+        <dl>
+          <div>
+            <dt>지역</dt>
+            <dd>{area?.data.name ?? venue.data.area}</dd>
+          </div>
+          <div>
+            <dt>영업시간</dt>
+            <dd>{openingHoursText}</dd>
+          </div>
+          <div>
+            <dt>가격</dt>
+            <dd>{pricePreviewText}</dd>
+          </div>
+        </dl>
+      </div>
+      <nav class="side-card side-nav" aria-label="상세 페이지 이동">
+        <p class="side-kicker">바로 이동</p>
+        <a href="#venue-gallery">갤러리</a>
+        <a href="#venue-inquiry">상세 안내</a>
+        {normalizedPriceText && <a href="#price-detail">가격표</a>}
+        {addressText && <a href="#location-detail">위치 안내</a>}
+        <a href="#venue-flow">이용 순서</a>
+      </nav>
+    </aside>
   </section>
 
   <section class="section-block reveal">
@@ -442,20 +534,38 @@ const jsonLd = {
     const coreSticky = document.querySelector('[data-core-sticky]');
     const priceSummary = document.querySelector('[data-price-summary]');
     const priceToggle = document.querySelector('[data-price-toggle]');
+    const coreHours = document.querySelector('[data-core-hours]');
     const compactMedia = window.matchMedia('(max-width: 720px)');
+    let isPriceExpanded = false;
 
-    const updatePriceToggleLabel = (expanded) => {
-      if (!priceToggle) return;
-      priceToggle.textContent = expanded ? '접기' : '펼치기';
-      priceToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      priceSummary?.classList.toggle('is-collapsed', !expanded);
+    const syncCoreLabels = () => {
+      const isCompact = compactMedia.matches && coreSticky?.classList.contains('is-compact');
+
+      if (coreHours) {
+        coreHours.textContent = isCompact ? coreHours.dataset.compactText : coreHours.dataset.fullText;
+      }
+
+      if (priceSummary) {
+        const nextText = isCompact
+          ? priceSummary.dataset.priceCompact
+          : isPriceExpanded
+            ? priceSummary.dataset.priceFull
+            : priceSummary.dataset.pricePreview;
+        priceSummary.textContent = nextText || '';
+        priceSummary.classList.toggle('is-collapsed', !isPriceExpanded || isCompact);
+      }
+
+      if (priceToggle) {
+        priceToggle.textContent = isPriceExpanded ? '가격 접기' : '가격 전체 보기';
+        priceToggle.setAttribute('aria-expanded', isPriceExpanded ? 'true' : 'false');
+      }
     };
 
     if (priceToggle && priceSummary) {
-      updatePriceToggleLabel(true);
+      syncCoreLabels();
       priceToggle.addEventListener('click', () => {
-        const expanded = priceToggle.getAttribute('aria-expanded') === 'true';
-        updatePriceToggleLabel(!expanded);
+        isPriceExpanded = !isPriceExpanded;
+        syncCoreLabels();
       });
     }
 
@@ -471,13 +581,42 @@ const jsonLd = {
       const isStuck = rect.top <= topOffset + 1;
       const shouldCompact = isStuck && window.scrollY > 30;
       coreSticky.classList.toggle('is-compact', shouldCompact);
+      syncCoreLabels();
     };
 
-    updateCoreStickyCompact();
+    const scheduleCoreStickyUpdate = () => {
+      updateCoreStickyCompact();
+      window.requestAnimationFrame(updateCoreStickyCompact);
+      window.setTimeout(updateCoreStickyCompact, 120);
+    };
+
+    const alignInquiryHash = () => {
+      if (window.location.hash !== '#venue-inquiry') return;
+      const target = document.querySelector('#venue-inquiry');
+      if (!target) return;
+      updateCoreStickyCompact();
+      const coreBottom = coreSticky?.getBoundingClientRect().bottom ?? 0;
+      const targetTop = target.getBoundingClientRect().top + window.scrollY;
+      const desiredTop = Math.max(coreBottom + 14, 110);
+      window.scrollTo(0, Math.max(targetTop - desiredTop, 0));
+    };
+
+    const scheduleHashAlignment = () => {
+      scheduleCoreStickyUpdate();
+      window.requestAnimationFrame(alignInquiryHash);
+      window.setTimeout(alignInquiryHash, 160);
+      window.setTimeout(alignInquiryHash, 420);
+    };
+
+    scheduleHashAlignment();
     window.addEventListener('scroll', updateCoreStickyCompact, { passive: true });
-    window.addEventListener('resize', updateCoreStickyCompact, { passive: true });
+    window.addEventListener('resize', scheduleCoreStickyUpdate, { passive: true });
+    window.addEventListener('load', scheduleHashAlignment, { passive: true });
+    window.addEventListener('hashchange', scheduleHashAlignment, { passive: true });
     compactMedia.addEventListener?.('change', updateCoreStickyCompact);
     compactMedia.addListener?.(updateCoreStickyCompact);
+    const compactWarmupTimer = window.setInterval(updateCoreStickyCompact, 120);
+    window.setTimeout(() => window.clearInterval(compactWarmupTimer), 1200);
 
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver(
@@ -497,6 +636,14 @@ const jsonLd = {
 </BaseLayout>
 
 <style>
+  :global(main) {
+    max-width: 1320px;
+  }
+
+  .venue-lead-grid {
+    margin-bottom: 14px;
+  }
+
   .venue-hero {
     position: relative;
     border-radius: 20px;
@@ -600,6 +747,14 @@ const jsonLd = {
     cursor: pointer;
   }
 
+  .core-price-card .price-toggle {
+    width: fit-content;
+  }
+
+  .desktop-action-card {
+    display: none;
+  }
+
   .venue-grid {
     display: block;
   }
@@ -607,6 +762,10 @@ const jsonLd = {
   .venue-main {
     max-width: 920px;
     margin: 0 auto;
+  }
+
+  .venue-side {
+    display: none;
   }
 
   .section-block {
@@ -621,6 +780,16 @@ const jsonLd = {
     margin: 0 0 12px;
     font-size: 1.2rem;
     color: #ffe84a;
+  }
+
+  #venue-inquiry {
+    display: grid;
+    gap: 14px;
+    scroll-margin-top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 96px);
+  }
+
+  #venue-inquiry h2 {
+    margin-bottom: 0;
   }
 
   .timeline {
@@ -667,6 +836,10 @@ const jsonLd = {
     grid-template-columns: 44px minmax(0, 1fr) 44px;
     gap: 8px;
     align-items: center;
+  }
+
+  .gallery-shell.is-single {
+    grid-template-columns: 1fr;
   }
 
   .gallery-track {
@@ -732,18 +905,42 @@ const jsonLd = {
     transform: scale(1.2);
   }
 
-  .intro-body,
-  .location-text {
-    color: #d7deef;
-    line-height: 1.75;
+  .intro-body {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 232, 74, 0.2);
+    background:
+      linear-gradient(180deg, rgba(255, 232, 74, 0.08), rgba(255, 255, 255, 0.035)),
+      rgba(9, 12, 18, 0.92);
+  }
+
+  .intro-body-block {
+    margin: 0;
+    color: #dce7fb;
+    font-size: 1rem;
+    line-height: 1.82;
+    white-space: pre-line;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  .intro-body-block.is-lead {
+    color: #f8fbff;
+    font-size: 1.04rem;
+    font-weight: 700;
   }
 
   .price-box {
-    margin: 12px 0 14px;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.03);
+    margin: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 244, 255, 0.18);
+    background: rgba(34, 244, 255, 0.055);
+    scroll-margin-top: 150px;
   }
 
   .price-box h3 {
@@ -752,11 +949,41 @@ const jsonLd = {
     color: #f7f9ff;
   }
 
-  .price-box p {
+  .price-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .price-list p {
     margin: 0;
     white-space: pre-line;
     color: #d7deef;
-    line-height: 1.7;
+    line-height: 1.72;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .location-card {
+    margin: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .location-card h3 {
+    margin: 0 0 8px;
+    font-size: 0.98rem;
+    color: #f7f9ff;
+  }
+
+  .location-card p {
+    margin: 0;
+    color: #d7deef;
+    line-height: 1.78;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
   }
 
   .map-embed {
@@ -792,16 +1019,114 @@ const jsonLd = {
     font-size: 0.9rem;
   }
 
-  .venue-body :global(h2),
+  .venue-body {
+    display: grid;
+    gap: 14px;
+    margin-top: 2px;
+  }
+
+  .venue-body :global(h2) {
+    margin: 10px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffe84a;
+    font-size: 1.22rem;
+    line-height: 1.38;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
   .venue-body :global(h3) {
-    margin-top: 1.2em;
-    margin-bottom: 0.5em;
+    margin: 8px 0 0;
+    color: #fff6b8;
+    font-size: 1.08rem;
+    line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .venue-body :global(p),
   .venue-body :global(li) {
-    line-height: 1.8;
+    line-height: 1.82;
     color: #d7deef;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  .venue-body :global(p) {
+    margin: 0;
+  }
+
+  .venue-body :global(blockquote) {
+    margin: 0;
+    padding: 14px;
+    border-left: 3px solid #ffe84a;
+    border-radius: 12px;
+    background: rgba(255, 232, 74, 0.07);
+  }
+
+  .venue-body :global(blockquote p) {
+    color: #f4f8ff;
+    font-weight: 700;
+    line-height: 1.7;
+  }
+
+  .venue-body :global(strong) {
+    color: #fff6b8;
+  }
+
+  .venue-body :global(ol),
+  .venue-body :global(ul) {
+    display: grid;
+    gap: 10px;
+    margin: 2px 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .venue-body :global(ol) {
+    counter-reset: venue-step;
+  }
+
+  .venue-body :global(ol > li),
+  .venue-body :global(ul > li) {
+    position: relative;
+    min-height: 44px;
+    padding: 12px 13px 12px 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .venue-body :global(ol > li::before),
+  .venue-body :global(ul > li::before) {
+    position: absolute;
+    left: 12px;
+    top: 13px;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(255, 232, 74, 0.16);
+    color: #fff2a8;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .venue-body :global(ol > li::before) {
+    counter-increment: venue-step;
+    content: counter(venue-step);
+  }
+
+  .venue-body :global(ul > li::before) {
+    content: '';
+    top: 19px;
+    width: 8px;
+    height: 8px;
+    background: #22f4ff;
   }
 
   .venue-body :global(img) {
@@ -947,19 +1272,403 @@ const jsonLd = {
     transform: translateY(0);
   }
 
-  @media (max-width: 720px) {
+  @media (min-width: 1120px) {
+    .venue-lead-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.65fr);
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .venue-hero {
+      min-height: 520px;
+      margin-bottom: 0;
+      border-radius: 22px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    }
+
     .venue-hero img {
-      height: 290px;
+      height: 520px;
+      transform: scale(1.01);
     }
 
     .hero-overlay {
+      padding: 36px 38px;
+      background:
+        linear-gradient(90deg, rgba(6, 7, 11, 0.82) 0%, rgba(6, 7, 11, 0.42) 50%, rgba(6, 7, 11, 0.08) 100%),
+        linear-gradient(180deg, transparent 0%, rgba(6, 7, 11, 0.72) 100%);
+    }
+
+    .hero-overlay h1 {
+      max-width: 720px;
+      font-size: clamp(2.15rem, 3vw, 3.15rem);
+      line-height: 1.14;
+    }
+
+    .hero-lead {
+      max-width: 680px;
+      font-size: 1.05rem;
+      line-height: 1.72;
+    }
+
+    .venue-core-sticky {
+      position: relative;
+      top: auto;
+      z-index: 1;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 0;
+      align-content: stretch;
+      height: 100%;
+      backdrop-filter: none;
+    }
+
+    .core-card,
+    .desktop-action-card {
+      border-radius: 18px;
+      border-color: rgba(255, 255, 255, 0.16);
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+        rgba(9, 12, 18, 0.94);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .core-card {
       padding: 18px;
+    }
+
+    .core-card span,
+    .desktop-action-card span {
+      font-size: 0.82rem;
+      color: #9ca8c2;
+    }
+
+    .core-card strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 1.04rem;
+      line-height: 1.5;
+    }
+
+    .core-price-card {
+      min-height: 150px;
+    }
+
+    .core-card .price-summary:not(.is-collapsed) {
+      max-height: 210px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .price-toggle {
+      min-height: 34px;
+      padding: 0 12px;
+      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .price-toggle:hover {
+      border-color: rgba(255, 232, 74, 0.52);
+      background: rgba(255, 232, 74, 0.12);
+      color: #fff6b8;
+    }
+
+    .desktop-action-card {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .desktop-action-card strong {
+      color: #f7fbff;
+      font-size: 1.04rem;
+      line-height: 1.35;
+    }
+
+    .desktop-action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .desktop-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      border: 0;
+      border-radius: 12px;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .desktop-action.kakao {
+      background: #fee500;
+      color: #1a1a1a;
+    }
+
+    .desktop-action.line {
+      background: #06c755;
+      color: #ffffff;
+    }
+
+    .desktop-action.inquiry {
+      grid-column: 1 / -1;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .desktop-action:disabled {
+      opacity: 0.74;
+      cursor: not-allowed;
+    }
+
+    .venue-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .venue-main {
+      max-width: none;
+      margin: 0;
+      min-width: 0;
+    }
+
+    .venue-side {
+      position: sticky;
+      top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 16px);
+      display: grid;
+      gap: 12px;
+    }
+
+    .side-card {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
+        rgba(8, 10, 14, 0.94);
+    }
+
+    .side-kicker {
+      margin: 0 0 8px;
+      color: #9ca8c2;
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .side-card h2 {
+      margin: 0 0 14px;
+      color: #ffe84a;
+      font-size: 1.08rem;
+      line-height: 1.35;
+    }
+
+    .side-card dl {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+    }
+
+    .side-card dl div {
+      display: grid;
+      gap: 4px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .side-card dl div:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .side-card dt {
+      color: #8e9ab4;
+      font-size: 0.78rem;
+    }
+
+    .side-card dd {
+      margin: 0;
+      color: #f5f8ff;
+      font-weight: 800;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .side-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .side-nav a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 42px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: #eaf3ff;
+      font-size: 0.92rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .side-nav a::after {
+      content: '›';
+      color: #ffe84a;
+      font-size: 1.15rem;
+    }
+
+    .side-nav a:hover {
+      border-color: rgba(34, 244, 255, 0.36);
+      background: rgba(34, 244, 255, 0.09);
+    }
+
+    .section-block {
+      margin: 0 0 18px;
+      padding: 22px;
+      border-radius: 18px;
+    }
+
+    .section-block h2 {
+      font-size: 1.32rem;
+    }
+
+    .gallery-block {
+      padding: 24px;
+    }
+
+    .gallery-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .gallery-nav,
+    .gallery-dots {
+      display: none;
+    }
+
+    .gallery-track {
+      gap: 12px;
+      overflow: visible;
+      scroll-snap-type: none;
+    }
+
+    .gallery-track.has-multiple {
+      grid-auto-flow: initial;
+      grid-auto-columns: initial;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: stretch;
+    }
+
+    .gallery-track.has-multiple .gallery-slide:first-child {
+      grid-column: span 2;
+      grid-row: span 2;
+    }
+
+    .gallery-slide {
+      scroll-snap-align: unset;
+    }
+
+    .gallery-slide img {
+      height: 460px;
+    }
+
+    .gallery-track.has-multiple .gallery-slide img {
+      height: 220px;
+    }
+
+    .gallery-track.has-multiple .gallery-slide:first-child img {
+      height: 452px;
+    }
+
+    #venue-inquiry {
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    #venue-inquiry h2,
+    .intro-body,
+    .venue-body,
+    .body-image-grid,
+    .map-embed,
+    .map-link-wrap {
+      grid-column: 1 / -1;
+    }
+
+    .intro-body,
+    .price-box,
+    .location-card {
+      padding: 18px;
+      border-radius: 16px;
+    }
+
+    .intro-body-block {
+      font-size: 1.03rem;
+      line-height: 1.86;
+    }
+
+    .intro-body-block.is-lead {
+      font-size: 1.1rem;
+    }
+
+    .price-list p,
+    .location-card p,
+    .venue-body :global(p),
+    .venue-body :global(li) {
+      font-size: 1.01rem;
+      line-height: 1.86;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .venue-hero {
+      min-height: 260px;
+      margin-bottom: 10px;
+      border-radius: 16px;
+    }
+
+    .venue-hero img {
+      height: 260px;
+    }
+
+    .hero-overlay {
+      padding: 16px;
+    }
+
+    .hero-overlay h1 {
+      font-size: 1.42rem;
+    }
+
+    .hero-lead {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 0.92rem;
     }
 
     .venue-core-sticky {
       grid-template-columns: 1fr;
       top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 6px);
       gap: 8px;
+    }
+
+    .core-card {
+      padding: 10px 12px;
+    }
+
+    .core-card strong {
+      display: block;
+      font-size: 0.9rem;
+      line-height: 1.45;
     }
 
     .venue-core-sticky.is-compact {
@@ -985,14 +1694,51 @@ const jsonLd = {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      text-align: center;
     }
 
     .venue-core-sticky.is-compact .price-toggle {
       display: none;
     }
 
+    .price-toggle {
+      min-height: 32px;
+      padding: 0 12px;
+    }
+
     .section-block {
       padding: 14px;
+    }
+
+    #venue-inquiry {
+      gap: 12px;
+      scroll-margin-top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 132px);
+    }
+
+    .intro-body,
+    .price-box,
+    .location-card {
+      padding: 13px;
+      border-radius: 13px;
+    }
+
+    .intro-body-block,
+    .price-list p,
+    .location-card p,
+    .venue-body :global(p),
+    .venue-body :global(li) {
+      font-size: 0.98rem;
+      line-height: 1.78;
+    }
+
+    .venue-body :global(ol > li),
+    .venue-body :global(ul > li) {
+      padding: 11px 12px 11px 40px;
+    }
+
+    .venue-body :global(ol > li::before),
+    .venue-body :global(ul > li::before) {
+      left: 11px;
     }
 
     .gallery-shell {
