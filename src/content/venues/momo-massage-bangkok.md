@@ -7,7 +7,7 @@ visible: true
 featured: false
 order: 1
 updatedAt: 2026-05-25T10:22:00.000+09:00
-shortDescription: 통로 지역에 위치한 일본식 프리미엄 마사지샵. 누루 마사지, VIP 자쿠지룸, 2인(4핸즈) 서비스 및 호텔 출장 서비스를 운영
+shortDescription: 💥 통로역 도보권 최상급 수질! 에어매트 누루의 끝판왕 [MOMO Thonglor] (자쿠지 VIP 룸 & 압도적 출근율 보장)
 introBody: 상대적으로 연령대가 어린편이며, 일본인 대상으로 판매하여 아가씨들 마인드가 상당히 괜찮은편이며 다국어(일본어/영어/중국어) 대응 가능.
 seoTitle: "MOMO Thonglor Bangkok Premium Massage | NURU & VIP Erotic "
 seoDescription: Bangkok Thonglor premium Japanese-style massage salon offering
