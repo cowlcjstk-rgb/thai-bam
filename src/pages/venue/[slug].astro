@@ -62,6 +62,14 @@ const introBodyText = normalizeMultilineText(venue.data.introBody || venue.data.
 const introBlocks = toTextBlocks(introBodyText);
 const priceBlocks = toTextBlocks(normalizedPriceText);
 const addressText = normalizeMultilineText(venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.');
+const cleanInlineText = (value = '') => normalizeMultilineText(value).replace(/\s+/g, ' ').trim();
+const truncateText = (value = '', max = 34) => {
+  const text = cleanInlineText(value);
+  return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+};
+const pricePreviewText = priceLines.slice(0, 2).join('\n') || priceFallback;
+const openingHoursText = venue.data.openingHours ?? '문의 시 안내';
+const openingCompactText = truncateText(openingHoursText.split('/')[0], 18);
 
 const extractCoords = (raw) => {
   if (!raw) return undefined;
@@ -212,14 +220,22 @@ const jsonLd = {
     </div>
     <div class="core-card">
       <span>영업시간</span>
-      <strong>{venue.data.openingHours ?? '문의 시 안내'}</strong>
+      <strong data-core-hours data-full-text={openingHoursText} data-compact-text={openingCompactText}>{openingHoursText}</strong>
     </div>
-    <div class="core-card">
+    <div class="core-card core-price-card">
       <span>가격대</span>
-      <strong class:list={['price-summary', hasLongPriceText && 'is-collapsible']} data-price-summary>{priceSummary}</strong>
+      <strong
+        class:list={['price-summary', hasLongPriceText && 'is-collapsible']}
+        data-price-summary
+        data-price-preview={pricePreviewText}
+        data-price-full={priceSummary}
+        data-price-compact="가격 보기"
+      >
+        {pricePreviewText}
+      </strong>
       {hasLongPriceText && (
-        <button type="button" class="price-toggle" data-price-toggle aria-expanded="true">
-          접기
+        <button type="button" class="price-toggle" data-price-toggle aria-expanded="false">
+          가격 전체 보기
         </button>
       )}
     </div>
@@ -269,7 +285,7 @@ const jsonLd = {
           </div>
         )}
         {normalizedPriceText && (
-          <div class="price-box">
+          <div id="price-detail" class="price-box">
             <h3>가격대 안내</h3>
             <div class="price-list">
               {(priceBlocks.length > 0 ? priceBlocks : [normalizedPriceText]).map((block) => (
@@ -467,20 +483,38 @@ const jsonLd = {
     const coreSticky = document.querySelector('[data-core-sticky]');
     const priceSummary = document.querySelector('[data-price-summary]');
     const priceToggle = document.querySelector('[data-price-toggle]');
+    const coreHours = document.querySelector('[data-core-hours]');
     const compactMedia = window.matchMedia('(max-width: 720px)');
+    let isPriceExpanded = false;
 
-    const updatePriceToggleLabel = (expanded) => {
-      if (!priceToggle) return;
-      priceToggle.textContent = expanded ? '접기' : '펼치기';
-      priceToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      priceSummary?.classList.toggle('is-collapsed', !expanded);
+    const syncCoreLabels = () => {
+      const isCompact = compactMedia.matches && coreSticky?.classList.contains('is-compact');
+
+      if (coreHours) {
+        coreHours.textContent = isCompact ? coreHours.dataset.compactText : coreHours.dataset.fullText;
+      }
+
+      if (priceSummary) {
+        const nextText = isCompact
+          ? priceSummary.dataset.priceCompact
+          : isPriceExpanded
+            ? priceSummary.dataset.priceFull
+            : priceSummary.dataset.pricePreview;
+        priceSummary.textContent = nextText || '';
+        priceSummary.classList.toggle('is-collapsed', !isPriceExpanded || isCompact);
+      }
+
+      if (priceToggle) {
+        priceToggle.textContent = isPriceExpanded ? '가격 접기' : '가격 전체 보기';
+        priceToggle.setAttribute('aria-expanded', isPriceExpanded ? 'true' : 'false');
+      }
     };
 
     if (priceToggle && priceSummary) {
-      updatePriceToggleLabel(true);
+      syncCoreLabels();
       priceToggle.addEventListener('click', () => {
-        const expanded = priceToggle.getAttribute('aria-expanded') === 'true';
-        updatePriceToggleLabel(!expanded);
+        isPriceExpanded = !isPriceExpanded;
+        syncCoreLabels();
       });
     }
 
@@ -496,6 +530,7 @@ const jsonLd = {
       const isStuck = rect.top <= topOffset + 1;
       const shouldCompact = isStuck && window.scrollY > 30;
       coreSticky.classList.toggle('is-compact', shouldCompact);
+      syncCoreLabels();
     };
 
     const scheduleCoreStickyUpdate = () => {
@@ -651,6 +686,10 @@ const jsonLd = {
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
+  }
+
+  .core-price-card .price-toggle {
+    width: fit-content;
   }
 
   .venue-grid {
@@ -830,6 +869,7 @@ const jsonLd = {
     border-radius: 14px;
     border: 1px solid rgba(34, 244, 255, 0.18);
     background: rgba(34, 244, 255, 0.055);
+    scroll-margin-top: 150px;
   }
 
   .price-box h3 {
@@ -945,6 +985,24 @@ const jsonLd = {
 
   .venue-body :global(p) {
     margin: 0;
+  }
+
+  .venue-body :global(blockquote) {
+    margin: 0;
+    padding: 14px;
+    border-left: 3px solid #ffe84a;
+    border-radius: 12px;
+    background: rgba(255, 232, 74, 0.07);
+  }
+
+  .venue-body :global(blockquote p) {
+    color: #f4f8ff;
+    font-weight: 700;
+    line-height: 1.7;
+  }
+
+  .venue-body :global(strong) {
+    color: #fff6b8;
   }
 
   .venue-body :global(ol),
@@ -1144,18 +1202,46 @@ const jsonLd = {
   }
 
   @media (max-width: 720px) {
+    .venue-hero {
+      min-height: 260px;
+      margin-bottom: 10px;
+      border-radius: 16px;
+    }
+
     .venue-hero img {
-      height: 290px;
+      height: 260px;
     }
 
     .hero-overlay {
-      padding: 18px;
+      padding: 16px;
+    }
+
+    .hero-overlay h1 {
+      font-size: 1.42rem;
+    }
+
+    .hero-lead {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 0.92rem;
     }
 
     .venue-core-sticky {
       grid-template-columns: 1fr;
       top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 6px);
       gap: 8px;
+    }
+
+    .core-card {
+      padding: 10px 12px;
+    }
+
+    .core-card strong {
+      display: block;
+      font-size: 0.9rem;
+      line-height: 1.45;
     }
 
     .venue-core-sticky.is-compact {
@@ -1181,10 +1267,16 @@ const jsonLd = {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      text-align: center;
     }
 
     .venue-core-sticky.is-compact .price-toggle {
       display: none;
+    }
+
+    .price-toggle {
+      min-height: 32px;
+      padding: 0 12px;
     }
 
     .section-block {
