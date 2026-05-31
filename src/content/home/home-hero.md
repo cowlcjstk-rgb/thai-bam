@@ -20,9 +20,9 @@ seoBlockParagraph2: |-
   가장 적합한 태국 밤문화를 연결해드립니다.
 categoryHighlights:
   - category: ktv-karaoke
-    venueSlug: bangkok-karaoke-one
+    venueSlug: nuada-ktv-bangkok
   - category: spa-massage
-    venueSlug: pattaya-sea-spa
+    venueSlug: momo-massage-bangkok
   - category: club-reservation
     venueSlug: bangkok-night-reserve
   - category: vip-guide
