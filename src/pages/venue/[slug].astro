@@ -41,8 +41,14 @@ const getThumbPosition = (position) => {
   return 'center center';
 };
 const heroImagePosition = getThumbPosition(venue.data.thumbnailPosition);
+const normalizeMultilineText = (value = '') => String(value ?? '').replace(/\\n/g, '\n').replace(/\r\n/g, '\n').trim();
+const toTextBlocks = (value = '') =>
+  normalizeMultilineText(value)
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
 const priceText = venue.data.priceRange?.trim() ?? '';
-const normalizedPriceText = priceText.replace(/\\n/g, '\n');
+const normalizedPriceText = normalizeMultilineText(priceText);
 const priceFallback = '문의 후 안내';
 const priceLines = normalizedPriceText
   ? normalizedPriceText
@@ -52,6 +58,10 @@ const priceLines = normalizedPriceText
   : [];
 const hasLongPriceText = priceLines.length >= 2;
 const priceSummary = normalizedPriceText || priceFallback;
+const introBodyText = normalizeMultilineText(venue.data.introBody || venue.data.shortDescription || '');
+const introBlocks = toTextBlocks(introBodyText);
+const priceBlocks = toTextBlocks(normalizedPriceText);
+const addressText = normalizeMultilineText(venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.');
 
 const extractCoords = (raw) => {
   if (!raw) return undefined;
@@ -251,14 +261,29 @@ const jsonLd = {
 
       <section id="venue-inquiry" class="section-block">
         <h2>상세 안내</h2>
-        {venue.data.introBody && <p class="intro-body">{venue.data.introBody}</p>}
+        {introBlocks.length > 0 && (
+          <div class="intro-body">
+            {introBlocks.map((block, index) => (
+              <p class:list={['intro-body-block', index === 0 && 'is-lead']}>{block}</p>
+            ))}
+          </div>
+        )}
         {normalizedPriceText && (
           <div class="price-box">
             <h3>가격대 안내</h3>
-            <p>{normalizedPriceText}</p>
+            <div class="price-list">
+              {(priceBlocks.length > 0 ? priceBlocks : [normalizedPriceText]).map((block) => (
+                <p>{block}</p>
+              ))}
+            </div>
           </div>
         )}
-        <p class="location-text">{venue.data.addressText ?? '위치 상세 안내는 문의 시 전달됩니다.'}</p>
+        {addressText && (
+          <div class="location-card">
+            <h3>위치 안내</h3>
+            <p>{addressText}</p>
+          </div>
+        )}
         <article class="venue-body">
           <Content />
         </article>
@@ -473,11 +498,39 @@ const jsonLd = {
       coreSticky.classList.toggle('is-compact', shouldCompact);
     };
 
-    updateCoreStickyCompact();
+    const scheduleCoreStickyUpdate = () => {
+      updateCoreStickyCompact();
+      window.requestAnimationFrame(updateCoreStickyCompact);
+      window.setTimeout(updateCoreStickyCompact, 120);
+    };
+
+    const alignInquiryHash = () => {
+      if (window.location.hash !== '#venue-inquiry') return;
+      const target = document.querySelector('#venue-inquiry');
+      if (!target) return;
+      updateCoreStickyCompact();
+      const coreBottom = coreSticky?.getBoundingClientRect().bottom ?? 0;
+      const targetTop = target.getBoundingClientRect().top + window.scrollY;
+      const desiredTop = Math.max(coreBottom + 14, 110);
+      window.scrollTo(0, Math.max(targetTop - desiredTop, 0));
+    };
+
+    const scheduleHashAlignment = () => {
+      scheduleCoreStickyUpdate();
+      window.requestAnimationFrame(alignInquiryHash);
+      window.setTimeout(alignInquiryHash, 160);
+      window.setTimeout(alignInquiryHash, 420);
+    };
+
+    scheduleHashAlignment();
     window.addEventListener('scroll', updateCoreStickyCompact, { passive: true });
-    window.addEventListener('resize', updateCoreStickyCompact, { passive: true });
+    window.addEventListener('resize', scheduleCoreStickyUpdate, { passive: true });
+    window.addEventListener('load', scheduleHashAlignment, { passive: true });
+    window.addEventListener('hashchange', scheduleHashAlignment, { passive: true });
     compactMedia.addEventListener?.('change', updateCoreStickyCompact);
     compactMedia.addListener?.(updateCoreStickyCompact);
+    const compactWarmupTimer = window.setInterval(updateCoreStickyCompact, 120);
+    window.setTimeout(() => window.clearInterval(compactWarmupTimer), 1200);
 
     const reveals = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver(
@@ -623,6 +676,16 @@ const jsonLd = {
     color: #ffe84a;
   }
 
+  #venue-inquiry {
+    display: grid;
+    gap: 14px;
+    scroll-margin-top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 96px);
+  }
+
+  #venue-inquiry h2 {
+    margin-bottom: 0;
+  }
+
   .timeline {
     margin: 0;
     padding: 0;
@@ -732,18 +795,41 @@ const jsonLd = {
     transform: scale(1.2);
   }
 
-  .intro-body,
-  .location-text {
-    color: #d7deef;
-    line-height: 1.75;
+  .intro-body {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 232, 74, 0.2);
+    background:
+      linear-gradient(180deg, rgba(255, 232, 74, 0.08), rgba(255, 255, 255, 0.035)),
+      rgba(9, 12, 18, 0.92);
+  }
+
+  .intro-body-block {
+    margin: 0;
+    color: #dce7fb;
+    font-size: 1rem;
+    line-height: 1.82;
+    white-space: pre-line;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  .intro-body-block.is-lead {
+    color: #f8fbff;
+    font-size: 1.04rem;
+    font-weight: 700;
   }
 
   .price-box {
-    margin: 12px 0 14px;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.03);
+    margin: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 244, 255, 0.18);
+    background: rgba(34, 244, 255, 0.055);
   }
 
   .price-box h3 {
@@ -752,11 +838,41 @@ const jsonLd = {
     color: #f7f9ff;
   }
 
-  .price-box p {
+  .price-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .price-list p {
     margin: 0;
     white-space: pre-line;
     color: #d7deef;
-    line-height: 1.7;
+    line-height: 1.72;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .location-card {
+    margin: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .location-card h3 {
+    margin: 0 0 8px;
+    font-size: 0.98rem;
+    color: #f7f9ff;
+  }
+
+  .location-card p {
+    margin: 0;
+    color: #d7deef;
+    line-height: 1.78;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
   }
 
   .map-embed {
@@ -792,16 +908,96 @@ const jsonLd = {
     font-size: 0.9rem;
   }
 
-  .venue-body :global(h2),
+  .venue-body {
+    display: grid;
+    gap: 14px;
+    margin-top: 2px;
+  }
+
+  .venue-body :global(h2) {
+    margin: 10px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffe84a;
+    font-size: 1.22rem;
+    line-height: 1.38;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
   .venue-body :global(h3) {
-    margin-top: 1.2em;
-    margin-bottom: 0.5em;
+    margin: 8px 0 0;
+    color: #fff6b8;
+    font-size: 1.08rem;
+    line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .venue-body :global(p),
   .venue-body :global(li) {
-    line-height: 1.8;
+    line-height: 1.82;
     color: #d7deef;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  .venue-body :global(p) {
+    margin: 0;
+  }
+
+  .venue-body :global(ol),
+  .venue-body :global(ul) {
+    display: grid;
+    gap: 10px;
+    margin: 2px 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .venue-body :global(ol) {
+    counter-reset: venue-step;
+  }
+
+  .venue-body :global(ol > li),
+  .venue-body :global(ul > li) {
+    position: relative;
+    min-height: 44px;
+    padding: 12px 13px 12px 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .venue-body :global(ol > li::before),
+  .venue-body :global(ul > li::before) {
+    position: absolute;
+    left: 12px;
+    top: 13px;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(255, 232, 74, 0.16);
+    color: #fff2a8;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .venue-body :global(ol > li::before) {
+    counter-increment: venue-step;
+    content: counter(venue-step);
+  }
+
+  .venue-body :global(ul > li::before) {
+    content: '';
+    top: 19px;
+    width: 8px;
+    height: 8px;
+    background: #22f4ff;
   }
 
   .venue-body :global(img) {
@@ -993,6 +1189,37 @@ const jsonLd = {
 
     .section-block {
       padding: 14px;
+    }
+
+    #venue-inquiry {
+      gap: 12px;
+      scroll-margin-top: calc(var(--site-menu-tabs-top, 8px) + var(--site-menu-tabs-height, 0px) + 132px);
+    }
+
+    .intro-body,
+    .price-box,
+    .location-card {
+      padding: 13px;
+      border-radius: 13px;
+    }
+
+    .intro-body-block,
+    .price-list p,
+    .location-card p,
+    .venue-body :global(p),
+    .venue-body :global(li) {
+      font-size: 0.98rem;
+      line-height: 1.78;
+    }
+
+    .venue-body :global(ol > li),
+    .venue-body :global(ul > li) {
+      padding: 11px 12px 11px 40px;
+    }
+
+    .venue-body :global(ol > li::before),
+    .venue-body :global(ul > li::before) {
+      left: 11px;
     }
 
     .gallery-shell {

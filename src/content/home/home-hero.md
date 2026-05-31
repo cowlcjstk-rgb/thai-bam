@@ -1,6 +1,6 @@
 ---
 heroKicker: THAILAND NIGHT GUIDE
-heroTitle: 태국 KTV · 마사지· 클럽 가이드
+heroTitle: 태국 KTV · 마사지 · 클럽 가이드
 heroDescription: |-
   태국의 진짜 밤은 늦게 시작됩니다.
 

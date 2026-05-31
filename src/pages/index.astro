@@ -18,9 +18,18 @@ const defaultHero = {
 const resolveVenueSlug = (entry) => entry.data.slug?.trim() || entry.slug;
 
 const homeHero = homeEntries.find((entry) => entry.slug === 'home-hero')?.data ?? homeEntries[0]?.data ?? defaultHero;
-const heroDescriptionParts = (homeHero.heroDescription ?? '').split(/(?<=[.!?])\s+/).filter(Boolean);
-const heroDescriptionLead = heroDescriptionParts[0] ?? '';
-const heroDescriptionBody = heroDescriptionParts.slice(1).join(' ');
+const normalizeMultilineText = (value = '') => String(value ?? '').replace(/\\n/g, '\n').replace(/\r\n/g, '\n').trim();
+const heroDescriptionText = normalizeMultilineText(homeHero.heroDescription ?? '');
+const heroDescriptionBlocks = heroDescriptionText
+  .split(/\n{2,}/)
+  .map((block) => block.trim())
+  .filter(Boolean);
+const heroDescriptionParts = heroDescriptionText.split(/(?<=[.!?])\s+/).filter(Boolean);
+const heroDescriptionLead = heroDescriptionBlocks.length > 1 ? heroDescriptionBlocks[0] : heroDescriptionParts[0] ?? '';
+const heroDescriptionBodyBlocks =
+  heroDescriptionBlocks.length > 1
+    ? heroDescriptionBlocks.slice(1)
+    : [heroDescriptionParts.slice(1).join(' ').trim()].filter(Boolean);
 const POST_INITIAL_COUNT = 6;
 const POST_BATCH_SIZE = 6;
 const latestVenues = [...venues].sort((a, b) => new Date(b.data.updatedAt).getTime() - new Date(a.data.updatedAt).getTime());
@@ -107,11 +116,13 @@ const getThumbPosition = (position) => {
       <div class="hero-copy-wrap">
         <p class="hero-kicker">{homeHero.heroKicker}</p>
         <h1>{homeHero.heroTitle}</h1>
-        <p class="hero-copy">
+        <div class="hero-copy">
           {heroDescriptionLead && <strong>{heroDescriptionLead}</strong>}
-          {heroDescriptionBody && <span>{heroDescriptionBody}</span>}
-          {!heroDescriptionLead && homeHero.heroDescription}
-        </p>
+          {heroDescriptionBodyBlocks.map((block) => (
+            <span>{block}</span>
+          ))}
+          {!heroDescriptionLead && heroDescriptionText}
+        </div>
         {homeHero.heroDescriptionImage && (
           <figure class="hero-copy-image">
             <img
@@ -472,6 +483,8 @@ const getThumbPosition = (position) => {
     line-height: 1.14;
     color: #ff3fb2;
     text-wrap: balance;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .hero-copy {
@@ -486,14 +499,22 @@ const getThumbPosition = (position) => {
   }
 
   .hero-copy strong {
+    display: block;
     color: #f6fbff;
     font-size: 1.06em;
     line-height: 1.5;
     font-weight: 700;
+    white-space: pre-line;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .hero-copy span {
+    display: block;
     color: #d8deed;
+    white-space: pre-line;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .hero-copy-image {
@@ -675,6 +696,8 @@ const getThumbPosition = (position) => {
     margin: 0;
     font-size: 1.45rem;
     color: #ffe600;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .section-head p {
@@ -769,6 +792,8 @@ const getThumbPosition = (position) => {
     font-size: 1.28rem;
     line-height: 1.32;
     color: #ff2ea5;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .post-body p {
@@ -835,6 +860,8 @@ const getThumbPosition = (position) => {
     color: #f6f7fb;
     font-size: 1.25rem;
     line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .seo-copy p,
@@ -861,6 +888,8 @@ const getThumbPosition = (position) => {
     margin: 0 0 8px;
     font-size: 1rem;
     color: #f9fcff;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   .reveal {
@@ -901,14 +930,23 @@ const getThumbPosition = (position) => {
     }
 
     .hero-copy {
-      margin-top: 4px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(255, 255, 255, 0.04);
-      line-height: 1.58;
-      font-size: 0.95rem;
-      gap: 6px;
+      margin-top: 8px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      line-height: 1.64;
+      font-size: 0.98rem;
+      gap: 8px;
+    }
+
+    .home-hero h1 {
+      font-size: clamp(1.62rem, 7vw, 2.1rem);
+      line-height: 1.18;
+    }
+
+    .hero-copy strong {
+      padding-left: 10px;
+      border-left: 3px solid #ffe600;
     }
 
     .post-feed-head h2 {
