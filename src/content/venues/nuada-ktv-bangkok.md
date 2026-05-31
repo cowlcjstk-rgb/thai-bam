@@ -4,8 +4,8 @@ slug: nuada-ktv-bangkok
 area: bangkok
 category: ktv-karaoke
 visible: true
-featured: false
-order: 100
+featured: true
+order: 2
 updatedAt: 2026-05-27T20:26:00.000+09:00
 shortDescription: 💥방콕 시내 반값으로 누리는 상위 1% 수질! 사뭇쁘라깐 NUADA 코요테 펍&KTV (때 묻지 않은 극강 마인드, 내상 제로 보장!)
 introBody: |-
