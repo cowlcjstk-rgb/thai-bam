@@ -4,7 +4,7 @@ slug: momo-massage-bangkok
 area: bangkok
 category: spa-massage
 visible: true
-featured: false
+featured: true
 order: 1
 updatedAt: 2026-05-25T10:22:00.000+09:00
 shortDescription: 💥 통로역 도보권 최상급 수질! 에어매트 누루의 끝판왕 [MOMO Thonglor] (자쿠지 VIP 룸 & 압도적 출근율 보장)
